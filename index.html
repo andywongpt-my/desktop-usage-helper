@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Desktop Usage Helper</title>
+    <style>
+      /* Inline critical CSS — first paint must show dark, never flash white */
+      html, body, #root { background-color: #0a0a0c !important; color: #e5e7eb; }
+      body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable", "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+      #root { min-height: 100vh; }
+      .app-loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; color: #4b4b57; font-size: 14px; }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <div class="app-loading">Loading…</div>
+    </div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

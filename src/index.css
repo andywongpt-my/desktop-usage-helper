@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    background-color: #0a0a0c;
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-gray-950 text-gray-200;
+  }
+  /* Custom scrollbar — match dark palette */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: #0a0a0c; }
+  ::-webkit-scrollbar-thumb { background: #2d2d35; border-radius: 5px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3a3a44; }
+}
+
+@layer components {
+  .card {
+    @apply bg-gray-900 border border-gray-800 rounded-xl p-5 shadow-lg;
+    @apply transition-all duration-200;
+  }
+  .card-hover:hover {
+    @apply border-gray-700 shadow-xl;
+  }
+  .progress-track {
+    @apply h-2 bg-gray-800 rounded-full overflow-hidden;
+  }
+  .progress-fill {
+    @apply h-full rounded-full transition-all duration-500 ease-out;
+  }
+  .progress-fill-ok { @apply bg-gradient-to-r from-emerald-500 to-emerald-400; }
+  .progress-fill-warn { @apply bg-gradient-to-r from-amber-500 to-amber-400; }
+  .progress-fill-danger { @apply bg-gradient-to-r from-rose-500 to-rose-400; }
+  .progress-fill-info { @apply bg-gradient-to-r from-blue-500 to-blue-400; }
+}

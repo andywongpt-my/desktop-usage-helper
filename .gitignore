@@ -1,0 +1,18 @@
+# Build artifacts
+dist/
+node_modules/
+src-tauri/target/
+src-tauri/gen/
+
+# Logs
+*.log
+.tauri-dev.log
+.vite-preview.log
+
+# Generated / scratch
+generate_icons.py
+fix_ico.py
+.cargo_check.bat
+.cargo_build.bat
+.start_dev.bat
+*.tmp_probe*
