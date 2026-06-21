@@ -1,10 +1,17 @@
-use crate::errors::AppResult;
+use crate::errors::{AppError, AppResult};
 use crate::models::{AppConfig, ProviderMeta, ProviderStatus, RefreshResult};
 use crate::provider::{refresh_all as do_refresh_all, refresh_one, ProviderRegistry};
 use serde::Deserialize;
 use serde_json::Value;
 use tauri::{AppHandle, Manager};
+use tauri_plugin_autostart::ManagerExt;
 use tauri_plugin_store::StoreExt;
+
+/// Show + focus the main window (called from frontend / tray menu).
+#[tauri::command]
+pub fn show_window(app: AppHandle) {
+    crate::tray::show_main_window(&app);
+}
 
 #[tauri::command]
 pub fn ping() -> String {
@@ -21,7 +28,16 @@ pub async fn list_providers(app: AppHandle) -> AppResult<Vec<ProviderMeta>> {
 
 #[tauri::command]
 pub async fn refresh_all(app: AppHandle) -> AppResult<RefreshResult> {
-    do_refresh_all(&app).await
+    // Trigger an immediate refresh via the poll module — same path the tray menu uses.
+    // Returns the latest snapshot synchronously for the caller.
+    let result = do_refresh_all(&app).await?;
+    // Also push the new statuses to the frontend so a manual click refreshes the UI
+    // even if the renderer missed the background emit.
+    if let Ok(json) = serde_json::to_string(&result.statuses) {
+        use tauri::Emitter;
+        let _ = app.emit("usage:statuses", json);
+    }
+    Ok(result)
 }
 
 #[tauri::command]
@@ -77,6 +93,38 @@ pub async fn set_provider_api_key(
         .store("config.json")
         .map_err(|e| crate::errors::AppError::Config(e.to_string()))?;
     cfg_store.set_provider_api_key(&store, &id, &api_key).await
+}
+
+/// Toggle the OS-level autostart (Windows: registry Run key).
+/// Persists the new state to the config store AFTER the OS call succeeds —
+/// that way a denied toggle doesn't leave a "true" config behind.
+#[tauri::command]
+pub async fn set_autostart(app: AppHandle, enabled: bool) -> AppResult<AppConfig> {
+    let manager = app.autolaunch();
+    if enabled {
+        manager
+            .enable()
+            .map_err(|e| AppError::Config(format!("autostart enable: {e}")))?;
+    } else {
+        manager
+            .disable()
+            .map_err(|e| AppError::Config(format!("autostart disable: {e}")))?;
+    }
+    let cfg_store = app.state::<crate::config::ConfigStore>();
+    let store = app
+        .store("config.json")
+        .map_err(|e| AppError::Config(e.to_string()))?;
+    let mut cfg = cfg_store.snapshot().await;
+    cfg.autostart_enabled = enabled;
+    crate::config::persist(&store, &cfg).map_err(AppError::Config)?;
+    Ok(cfg)
+}
+
+/// Return whether autostart is currently enabled in the OS (independent of
+/// the cached config flag, in case they get out of sync).
+#[tauri::command]
+pub fn get_autostart_status(app: AppHandle) -> bool {
+    app.autolaunch().is_enabled().unwrap_or(false)
 }
 
 #[derive(Debug, serde::Serialize)]

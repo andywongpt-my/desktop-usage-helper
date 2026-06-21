@@ -1,54 +1,32 @@
 import { useEffect } from "react";
 import { useUsageStore } from "../stores/useUsageStore.js";
-import { useConfigStore } from "../stores/useConfigStore.js";
-import { refreshAll } from "../lib/tauri.js";
 import ProviderCard from "./ProviderCard.jsx";
 import EmptyState from "./EmptyState.jsx";
 
-export default function Dashboard() {
+/**
+ * Dashboard — the main grid of provider cards.
+ *
+ * Polling is owned by the Rust backend (poll loop emits `usage:statuses`).
+ * The renderer only:
+ *   - Re-fetches on window focus (cheap, instant feedback after a meal break)
+ *   - Receives event updates via the listener in App.jsx
+ */
+export default function Dashboard({ onRefresh }) {
   const providers = useUsageStore((s) => s.getVisibleProviders());
-  const setStatuses = useUsageStore((s) => s.setStatuses);
-  const setProviders = useUsageStore((s) => s.setProviders);
-  const setLoading = useUsageStore((s) => s.setLoading);
   const isLoading = useUsageStore((s) => s.isLoading);
-  const pollIntervalSec = useConfigStore((s) => s.config.pollIntervalSec);
 
-  // Auto-refresh loop
-  useEffect(() => {
-    let cancelled = false;
-    const tick = async () => {
-      if (cancelled || document.hidden) return;
-      setLoading(true);
-      try {
-        const result = await refreshAll();
-        if (cancelled) return;
-        setStatuses(result.statuses);
-        setProviders(result.providers);
-      } catch (err) {
-        console.error("[Dashboard] refresh failed:", err);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-    const interval = setInterval(tick, Math.max(15, pollIntervalSec) * 1000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [pollIntervalSec, setStatuses, setProviders, setLoading]);
-
-  // Re-poll when window regains focus
+  // Re-poll when window regains focus — gives instant freshness on alt-tab.
   useEffect(() => {
     const onFocus = async () => {
-      try {
-        const result = await refreshAll();
-        setStatuses(result.statuses);
-        setProviders(result.providers);
-      } catch {}
+      if (typeof onRefresh === "function") {
+        try {
+          await onRefresh();
+        } catch {}
+      }
     };
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
-  }, [setStatuses, setProviders]);
+  }, [onRefresh]);
 
   if (providers.length === 0) {
     return <EmptyState />;

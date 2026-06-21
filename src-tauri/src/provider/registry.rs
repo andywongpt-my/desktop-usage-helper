@@ -7,7 +7,6 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Manager};
-use tauri_plugin_store::StoreExt;
 use tokio::sync::Semaphore;
 
 const OVERALL_TIMEOUT: Duration = Duration::from_secs(15);

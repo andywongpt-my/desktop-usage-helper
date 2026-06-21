@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X, Eye, EyeOff, RotateCcw, CheckCircle2, XCircle } from "lucide-react";
 import { useConfigStore } from "../stores/useConfigStore.js";
 import { useUsageStore } from "../stores/useUsageStore.js";
-import { setApiKey, setProviderEnabled } from "../lib/tauri.js";
+import { setApiKey, setProviderEnabled, setAutostart, getAutostartStatus } from "../lib/tauri.js";
 
 export default function SettingsModal({ onClose }) {
   const config = useConfigStore((s) => s.config);
@@ -29,6 +29,37 @@ export default function SettingsModal({ onClose }) {
       console.error("[Settings] setApiKey failed:", err);
     }
   };
+
+  // OS-level autostart toggle — calls the autostart plugin then persists.
+  // On boot, Settings is mounted before this fires; we surface the OS state
+  // (not the cached config flag) so the checkbox matches reality.
+  const toggleAutostart = async (currentEnabled) => {
+    try {
+      const next = await setAutostart(!currentEnabled);
+      await setConfig({ autostartEnabled: next.autostartEnabled });
+    } catch (err) {
+      console.error("[Settings] setAutostart failed:", err);
+    }
+  };
+
+  // On mount, reconcile the OS-level autostart state with the UI checkbox.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const enabled = await getAutostartStatus();
+        if (cancelled) return;
+        if (enabled !== config.autostartEnabled) {
+          await setConfig({ autostartEnabled: enabled });
+        }
+      } catch (err) {
+        console.error("[Settings] getAutostartStatus failed:", err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div
@@ -74,11 +105,18 @@ export default function SettingsModal({ onClose }) {
           {/* Thresholds */}
           <section>
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-              Alert thresholds (% remaining)
+              Alert thresholds
             </h3>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="flex items-center gap-3 text-sm">
-                <span className="text-gray-300 w-20">Warn at</span>
+            <p className="text-xs text-gray-500 mb-3">
+              <span className="text-gray-400">Warn / Danger</span> drives card
+              color.{" "}
+              <span className="text-gray-400">Toast</span> fires a Windows
+              notification when a provider's remaining % drops below the
+              threshold (and recovers above it).
+            </p>
+            <div className="grid grid-cols-3 gap-3">
+              <label className="flex items-center gap-2 text-sm">
+                <span className="text-gray-300 w-16">Warn</span>
                 <input
                   type="number"
                   min={1}
@@ -87,12 +125,31 @@ export default function SettingsModal({ onClose }) {
                   onChange={(e) =>
                     setConfig({ warnThresholdPct: Number(e.target.value) })
                   }
-                  className="bg-gray-800 border border-gray-700 rounded-md px-3 py-1.5 w-20 text-sm font-mono focus:outline-none focus:border-accent"
+                  className="bg-gray-800 border border-gray-700 rounded-md px-2 py-1.5 w-16 text-sm font-mono focus:outline-none focus:border-accent"
                 />
                 <span className="text-gray-500 text-xs">%</span>
               </label>
-              <label className="flex items-center gap-3 text-sm">
-                <span className="text-gray-300 w-20">Danger at</span>
+              <label className="flex items-center gap-2 text-sm">
+                <span className="text-gray-300 w-16">Toast</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={99}
+                  value={config.toastThresholdPct}
+                  onChange={(e) =>
+                    setConfig({
+                      toastThresholdPct: Math.max(
+                        1,
+                        Math.min(99, Number(e.target.value))
+                      ),
+                    })
+                  }
+                  className="bg-gray-800 border border-gray-700 rounded-md px-2 py-1.5 w-16 text-sm font-mono focus:outline-none focus:border-accent"
+                />
+                <span className="text-gray-500 text-xs">%</span>
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <span className="text-gray-300 w-16">Danger</span>
                 <input
                   type="number"
                   min={1}
@@ -101,7 +158,7 @@ export default function SettingsModal({ onClose }) {
                   onChange={(e) =>
                     setConfig({ dangerThresholdPct: Number(e.target.value) })
                   }
-                  className="bg-gray-800 border border-gray-700 rounded-md px-3 py-1.5 w-20 text-sm font-mono focus:outline-none focus:border-accent"
+                  className="bg-gray-800 border border-gray-700 rounded-md px-2 py-1.5 w-16 text-sm font-mono focus:outline-none focus:border-accent"
                 />
                 <span className="text-gray-500 text-xs">%</span>
               </label>
@@ -199,7 +256,7 @@ export default function SettingsModal({ onClose }) {
             </div>
           </section>
 
-          {/* Notifications + Autostart */}
+          {/* Notifications + Autostart + Tray */}
           <section>
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
               Behavior
@@ -214,16 +271,27 @@ export default function SettingsModal({ onClose }) {
                 className="accent-accent"
               />
               <span className="text-gray-300">
-                Show toast notification when usage drops below thresholds
+                Show toast notification when usage drops below Toast %
+              </span>
+            </label>
+            <label className="flex items-center gap-3 text-sm mb-2">
+              <input
+                type="checkbox"
+                checked={config.minimizeToTray}
+                onChange={(e) =>
+                  setConfig({ minimizeToTray: e.target.checked })
+                }
+                className="accent-accent"
+              />
+              <span className="text-gray-300">
+                Keep app running in tray when window is closed (close-to-tray)
               </span>
             </label>
             <label className="flex items-center gap-3 text-sm">
               <input
                 type="checkbox"
                 checked={config.autostartEnabled}
-                onChange={(e) =>
-                  setConfig({ autostartEnabled: e.target.checked })
-                }
+                onChange={() => toggleAutostart(config.autostartEnabled)}
                 className="accent-accent"
               />
               <span className="text-gray-300">

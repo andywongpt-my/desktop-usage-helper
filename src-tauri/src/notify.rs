@@ -1,5 +1,6 @@
 use crate::models::{ProviderMeta, ProviderStatus};
 use crate::provider::ProviderRegistry;
+use crate::tray::update_from_statuses;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tauri::{AppHandle, Manager};
@@ -8,13 +9,16 @@ use tauri_plugin_notification::NotificationExt;
 /// Track which providers we've already warned about this session so we don't spam.
 #[derive(Default)]
 pub struct NotifierState {
-    pub warned: HashMap<String, crate::models::ProviderState>,
+    /// `true` once we've fired the toast for this provider at its current critical level.
+    /// Reset when the provider recovers above the toast threshold.
+    pub fired: HashMap<String, ()>,
 }
 
 pub type NotifierStateHandle = Arc<tokio::sync::Mutex<NotifierState>>;
 
-/// Spawn a background task that listens for status updates and fires
-/// system notifications when a provider drops below threshold.
+/// Spawn the background notifier task. Listens for `usage:statuses` events
+/// emitted by the poll loop, fires Windows toasts on threshold crossings, and
+/// updates the tray icon + tooltip.
 pub fn spawn(app: AppHandle) {
     let state: NotifierStateHandle = Arc::new(tokio::sync::Mutex::new(NotifierState::default()));
     app.manage(state.clone());
@@ -22,13 +26,12 @@ pub fn spawn(app: AppHandle) {
     let app_handle = app.clone();
     let state_for_listener = state.clone();
     tauri::async_runtime::spawn(async move {
-        // Listen for refresh-complete events from the frontend and evaluate.
         use tauri::Listener;
         let app_inner = app_handle.clone();
         let _ = app_handle.listen("usage:statuses", move |event| {
             let payload_str = event.payload();
-            // Best-effort parse — never panic.
-            if let Ok(parsed) = serde_json::from_str::<HashMap<String, ProviderStatus>>(payload_str) {
+            if let Ok(parsed) = serde_json::from_str::<HashMap<String, ProviderStatus>>(payload_str)
+            {
                 let app_for_task = app_inner.clone();
                 let state_for_task = state_for_listener.clone();
                 tauri::async_runtime::spawn(async move {
@@ -39,48 +42,70 @@ pub fn spawn(app: AppHandle) {
     });
 }
 
+/// Evaluate a refresh snapshot, fire toasts on threshold crossings, and update the tray.
 async fn evaluate_and_notify(
     app: &AppHandle,
     state: &NotifierStateHandle,
     statuses: HashMap<String, ProviderStatus>,
 ) {
-    // Read config to see if notifications are enabled.
+    // Always refresh the tray icon + tooltip (cheap, visible feedback even on OK)
+    update_from_statuses(app, &statuses);
+
+    // Read config (notifications enabled, toast threshold)
     let cfg_store = app.state::<crate::config::ConfigStore>();
     let cfg = cfg_store.snapshot().await;
     if !cfg.notify_enabled {
+        // Still mark fired so we don't queue toasts once notifications re-enable
         return;
     }
+    let toast_pct = cfg.toast_threshold_pct;
     let registry = app.state::<ProviderRegistry>();
     let metas = registry.metas(&cfg);
 
     let mut guard = state.lock().await;
     for (id, status) in statuses.iter() {
-        let prev = guard.warned.get(id).copied();
-        let cur = status.state;
-        // Only notify on transition into warn/danger (not on every refresh).
-        let should_notify = matches!(cur, crate::models::ProviderState::Warn | crate::models::ProviderState::Danger)
-            && prev != Some(cur);
-        if should_notify {
+        let below = is_below_toast_threshold(status, toast_pct);
+        let already_fired = guard.fired.contains_key(id);
+
+        if below && !already_fired {
             let label = metas
                 .iter()
                 .find(|m| m.id == *id)
                 .map(|m: &ProviderMeta| m.label.clone())
                 .unwrap_or_else(|| id.clone());
             let body = match &status.primary {
-                Some(m) => format!("{}/{} {}", m.used, m.limit, m.unit.clone().unwrap_or_default()),
+                Some(m) => format!(
+                    "{}/{} {}",
+                    m.used,
+                    m.limit,
+                    m.unit.clone().unwrap_or_default()
+                ),
                 None => status.error.clone().unwrap_or_else(|| "check provider".to_string()),
             };
-            let title = match cur {
-                crate::models::ProviderState::Danger => format!("⛔ {} CRITICAL", label),
-                _ => format!("⚠️ {} low", label),
-            };
+            let title = format!("⚠️ {} below {}%", label, toast_pct);
             let _ = app
                 .notification()
                 .builder()
                 .title(&title)
                 .body(&body)
                 .show();
+            guard.fired.insert(id.clone(), ());
+        } else if !below && already_fired {
+            // Provider recovered — clear flag so next dip re-fires
+            guard.fired.remove(id);
         }
-        guard.warned.insert(id.clone(), cur);
     }
+}
+
+/// True iff the provider's primary metric remaining% < toast_pct.
+/// Unknown / no-data providers never trigger toasts.
+fn is_below_toast_threshold(status: &ProviderStatus, toast_pct: u32) -> bool {
+    let Some(p) = &status.primary else {
+        return false;
+    };
+    if p.limit <= 0.0 {
+        return false;
+    }
+    let remaining = ((p.limit - p.used) / p.limit * 100.0).max(0.0);
+    remaining < toast_pct as f64
 }

@@ -67,8 +67,15 @@ pub struct AppConfig {
     pub poll_interval_sec: u64,
     pub warn_threshold_pct: u32,
     pub danger_threshold_pct: u32,
+    /// When a provider's remaining% drops below this, fire a Windows toast.
+    /// Independent of the warn/danger classify (which only drives card color).
+    /// Default: 20.
+    pub toast_threshold_pct: u32,
     pub notify_enabled: bool,
     pub autostart_enabled: bool,
+    /// When the user closes the main window, hide to tray instead of quitting.
+    /// Default: true.
+    pub minimize_to_tray: bool,
     pub providers: std::collections::HashMap<String, ProviderUserConfig>,
 }
 
@@ -85,8 +92,10 @@ impl Default for AppConfig {
             poll_interval_sec: 60,
             warn_threshold_pct: 30,
             danger_threshold_pct: 10,
+            toast_threshold_pct: 20,
             notify_enabled: true,
             autostart_enabled: false,
+            minimize_to_tray: true,
             providers: Default::default(),
         }
     }

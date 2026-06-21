@@ -4,6 +4,8 @@ import { getConfig, updateConfig, checkEnvKeys } from "../lib/tauri.js";
 /**
  * Config store — proxy to Rust persisted config (Tauri store plugin).
  * On mount: load() pulls config from disk. Update through Rust only.
+ *
+ * Mirrors AppConfig from src-tauri/src/models.rs.
  */
 export const useConfigStore = create((set) => ({
   loaded: false,
@@ -11,8 +13,10 @@ export const useConfigStore = create((set) => ({
     pollIntervalSec: 60,
     warnThresholdPct: 30,
     dangerThresholdPct: 10,
+    toastThresholdPct: 20,
     notifyEnabled: true,
     autostartEnabled: false,
+    minimizeToTray: true,
     providers: {}, // id → { enabled, customLabel?, customApiKey? }
   },
   envKeys: [], // [{ id, envVar, present }]

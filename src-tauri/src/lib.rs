@@ -6,8 +6,11 @@ mod config;
 mod errors;
 mod models;
 mod notify;
+mod poll;
 mod provider;
+mod tray;
 
+use std::sync::Arc;
 use tauri::Manager;
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_store::StoreExt;
@@ -35,14 +38,31 @@ pub fn run() {
             // Initialize the global registry once and stash it in Tauri's state.
             let registry = provider::build_registry();
             let registry_len = registry.len();
-            app.manage(provider::ProviderRegistry::new(registry));
+            let registry_wrapper = provider::ProviderRegistry::new(registry);
+            app.manage(registry_wrapper);
 
             // Initialize config store (loads from disk; falls back to defaults).
             let store = app.store("config.json")?;
-            app.manage(config::ConfigStore::new(store));
+            let cfg_store = config::ConfigStore::new(store);
+            let cfg_store_arc = Arc::new(cfg_store);
+            app.manage(cfg_store_arc.clone());
 
-            // Spawn the background notifier task.
+            // ---- Tray icon + context menu ----
+            let tray = tray::install(&app.handle())?;
+            app.manage(tray);
+
+            // ---- Close-to-tray wiring on the main window ----
+            if let Some(window) = app.get_webview_window("main") {
+                tray::setup_close_to_tray(window, cfg_store_arc.clone());
+            } else {
+                tracing::warn!("main window not found at setup — close-to-tray disabled");
+            }
+
+            // ---- Background notifier (toast + tray updates on threshold crossings) ----
             notify::spawn(app.handle().clone());
+
+            // ---- Background poll loop (drives refresh + emits usage:statuses) ----
+            poll::spawn(app.handle().clone());
 
             tracing::info!(
                 "desktop-usage-helper started with {} providers",
@@ -59,7 +79,10 @@ pub fn run() {
             commands::update_config,
             commands::set_provider_enabled,
             commands::set_provider_api_key,
+            commands::set_autostart,
+            commands::get_autostart_status,
             commands::check_env_keys,
+            commands::show_window,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

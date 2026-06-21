@@ -67,9 +67,9 @@ Tauri v2 capabilities live in `src-tauri/capabilities/default.json`. Match patte
 
 ## TODO
 
-(Updated 2026-06-22, T-01)
+(Updated 2026-06-22, T-02)
 
-- [ ] Tray icon + status menu (T-02)
+- [x] Tray icon + status menu (T-02) ✅
 - [ ] Provider custom icon override (T-03)
 - [ ] CSV/JSON usage export (T-04)
 - [ ] OpenCode Zen OAuth (deferred — upstream blocker)
@@ -77,6 +77,7 @@ Tauri v2 capabilities live in `src-tauri/capabilities/default.json`. Match patte
 - [ ] Auto-updater via tauri-plugin-updater (T-06)
 - [ ] Re-test Codex endpoint with real `~/.codex/auth.json` token (T-07)
 - [ ] Visual regression test of `ProviderCard` states (T-08)
+- [ ] Onboarding first-run wizard (set initial API keys) (T-09)
 
 ## File map
 

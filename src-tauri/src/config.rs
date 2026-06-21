@@ -23,6 +23,16 @@ impl ConfigStore {
         self.inner.read().await.clone()
     }
 
+    /// Non-blocking read for use in sync contexts (e.g. window event handlers).
+    /// Returns Err if the lock is held by a writer — caller should fall back to
+    /// a safe default.
+    pub fn try_snapshot(&self) -> Result<AppConfig, ()> {
+        self.inner
+            .try_read()
+            .map(|guard| guard.clone())
+            .map_err(|_| ())
+    }
+
     /// Patch top-level fields and persist to disk.
     pub async fn patch(
         &self,
@@ -83,11 +93,17 @@ fn merge_into(target: &mut AppConfig, partial: serde_json::Value) {
     if let Some(v) = partial.get("danger_threshold_pct").and_then(|x| x.as_u64()) {
         target.danger_threshold_pct = v as u32;
     }
+    if let Some(v) = partial.get("toast_threshold_pct").and_then(|x| x.as_u64()) {
+        target.toast_threshold_pct = v as u32;
+    }
     if let Some(v) = partial.get("notify_enabled").and_then(|x| x.as_bool()) {
         target.notify_enabled = v;
     }
     if let Some(v) = partial.get("autostart_enabled").and_then(|x| x.as_bool()) {
         target.autostart_enabled = v;
+    }
+    if let Some(v) = partial.get("minimize_to_tray").and_then(|x| x.as_bool()) {
+        target.minimize_to_tray = v;
     }
     if let Some(map) = partial.get("providers").and_then(|x| x.as_object()) {
         for (id, val) in map {
@@ -112,7 +128,7 @@ fn merge_into(target: &mut AppConfig, partial: serde_json::Value) {
     }
 }
 
-fn persist(
+pub(crate) fn persist(
     store: &std::sync::Arc<tauri_plugin_store::Store<tauri::Wry>>,
     cfg: &AppConfig,
 ) -> Result<(), String> {
