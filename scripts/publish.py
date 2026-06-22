@@ -90,8 +90,9 @@ def upload_asset(filepath, name):
 
 print()
 print("=== Uploading assets ===")
-upload_asset(os.path.join(BUNDLE, "Desktop Usage Helper_0.2.1_x64-setup.exe"), "Desktop Usage Helper_0.2.1_x64-setup.exe")
-upload_asset(os.path.join(BUNDLE, "Desktop Usage Helper_0.2.1_x64-setup.exe.sig"), "Desktop Usage Helper_0.2.1_x64-setup.exe.sig")
+# Use dot-name convention (matches v0.2.0 release + latest.json URL)
+upload_asset(os.path.join(BUNDLE, "Desktop Usage Helper_0.2.1_x64-setup.exe"), "Desktop.Usage.Helper_0.2.1_x64-setup.exe")
+upload_asset(os.path.join(BUNDLE, "Desktop Usage Helper_0.2.1_x64-setup.exe.sig"), "Desktop.Usage.Helper_0.2.1_x64-setup.exe.sig")
 upload_asset(os.path.join(BUNDLE, "latest.json"), "latest.json")
 
 # 3. Verify

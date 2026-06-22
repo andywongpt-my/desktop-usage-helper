@@ -143,7 +143,7 @@ pub async fn import_from_gist(
     crate::config::persist(&store, &config).map_err(AppError::Config)?;
 
     // Update in-memory config via patch (which also persists)
-    let cfg_store = app.state::<Arc<ConfigStore>>();
+    let cfg_store = app.state::<ConfigStore>();
     let _ = cfg_store.patch(&store, serde_json::to_value(&config).unwrap_or_default()).await;
 
     // Parse and import history (best-effort)

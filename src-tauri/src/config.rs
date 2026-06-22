@@ -4,6 +4,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 /// Thread-safe wrapper around the persisted config store.
+#[derive(Clone)]
 pub struct ConfigStore {
     pub inner: Arc<RwLock<AppConfig>>,
 }

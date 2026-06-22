@@ -64,8 +64,7 @@ pub fn run_with_options(opts: RunOptions) {
             // Initialize config store.
             let store = app.store("config.json")?;
             let cfg_store = config::ConfigStore::new(store);
-            let cfg_store_arc = Arc::new(cfg_store);
-            app.manage(cfg_store_arc.clone());
+            app.manage(cfg_store.clone());
 
             // Initialize history store (file-based, for trend charts).
             let history_store = Arc::new(history::HistoryStore::new(app.handle()));
@@ -78,7 +77,7 @@ pub fn run_with_options(opts: RunOptions) {
             if !headless {
                 // Close-to-tray wiring.
                 if let Some(window) = app.get_webview_window("main") {
-                    tray::setup_close_to_tray(window, cfg_store_arc.clone());
+                    tray::setup_close_to_tray(window, cfg_store.clone());
                 } else {
                     tracing::warn!("main window not found at setup — close-to-tray disabled");
                 }

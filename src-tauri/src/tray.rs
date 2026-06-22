@@ -164,7 +164,7 @@ where
 /// Wire the close-to-tray behavior. Attach in `lib.rs` after the window is created.
 pub fn setup_close_to_tray<R: Runtime>(
     window: tauri::WebviewWindow<R>,
-    cfg_store: std::sync::Arc<crate::config::ConfigStore>,
+    cfg_store: crate::config::ConfigStore,
 ) where
     tauri::WebviewWindow<R>: Manager<R>,
 {
@@ -309,7 +309,7 @@ pub trait ConfigStoreSyncExt {
     fn snapshot_blocking_or_default(&self) -> AppConfig;
 }
 
-impl ConfigStoreSyncExt for std::sync::Arc<crate::config::ConfigStore> {
+impl ConfigStoreSyncExt for crate::config::ConfigStore {
     fn snapshot_blocking_or_default(&self) -> AppConfig {
         self.try_snapshot().unwrap_or_else(|_| AppConfig {
             minimize_to_tray: true, // safe default — don't accidentally quit
