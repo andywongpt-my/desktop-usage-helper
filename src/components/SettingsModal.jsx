@@ -31,8 +31,8 @@ export default function SettingsModal({ onClose }) {
 
   const toggleEnabled = async (id, currentEnabled) => {
     try {
-      await setProviderEnabled(id, !currentEnabled);
-      await setConfig({});
+      const updated = await setProviderEnabled(id, !currentEnabled);
+      useConfigStore.setState({ config: updated });
     } catch (err) {
       console.error("[Settings] toggle enabled failed:", err);
     }
@@ -40,7 +40,10 @@ export default function SettingsModal({ onClose }) {
 
   const setKey = async (id, value) => {
     try {
-      await setApiKey(id, value);
+      const updated = await setApiKey(id, value);
+      // CRITICAL: update the config store with the returned config,
+      // otherwise the input loses its value on the next render.
+      useConfigStore.setState({ config: updated });
       await refreshEnv();
     } catch (err) {
       console.error("[Settings] setApiKey failed:", err);
