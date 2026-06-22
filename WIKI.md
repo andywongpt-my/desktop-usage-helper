@@ -750,3 +750,26 @@ desktop-usage-helper/
 ├── WIKI.md                    # this file
 └── LICENSE                    # MIT
 ```
+
+---
+
+## Session 2026-06-23 #2 — Audit bug fixes (6/6 complete)
+
+### What changed
+All 6 bugs from the v0.2.4 audit are now fixed and pushed.
+
+| Bug | File(s) | Fix |
+|-----|---------|-----|
+| **1. StatusBar `t` shadowing** | `StatusBar.jsx` | Renamed effect-internal `t` (timer ID) → `timer` to avoid collision with i18n `t()` |
+| **2. sync.rs PATCH for new Gist** | `sync.rs` | Use `reqwest::Method::POST` for create, `Method::PATCH` for update (was using `.parse().unwrap_or("PATCH")` which returned `&str` not `Method` — also fixed compile error) |
+| **3. ProviderCard stale state** | `ProviderCard.jsx` | `loadTrend` wrapped in `useCallback` with explicit `hours` param; `useEffect` deps fixed (`[showTrend, trendData, loadTrend]`); `handleRangeChange` passes `hours` to `loadTrend(hours)` — no longer reads stale `trendRange` |
+| **4. Dashboard focus double-refresh** | `Dashboard.jsx` | Added 30s debounce via `useRef(0)` — `focus` event skips if refreshed within last 30s (Rust poll loop already handles periodic refresh) |
+| **5. CSP `https://*` too wide** | `tauri.conf.json` | Narrowed `connect-src` to explicit vendor domains: `api.anthropic.com`, `api.openai.com`, `api.github.com`, `chatgpt.com`, `ollama.com`, `opencode.ai`, `api.z.ai`, `open.bigmodel.cn`, `api.minimax.io`, + GitHub release endpoint |
+| **6. EmptyState hardcoded English** | `EmptyState.jsx` | Wired to `useI18nStore.t()` using existing `empty.title`, `empty.desc`, `empty.open_settings` keys |
+
+### Build verification
+- `vite build`: 1615 modules, ✅ in 4.19s
+- `cargo check`: ✅ 0 errors, 14 pre-existing warnings (dead code)
+
+### Commit
+`6472980` — "fix: resolve all 6 audit bugs" pushed to origin/main
