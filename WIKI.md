@@ -336,6 +336,37 @@ Verification:
 - `curl -X POST -H 'Content-Length: 0' https://ollama.com/api/me` returned `HTTP/1.1 401 Unauthorized` with dummy credentials, proving the 411 blocker is gone before auth validation.
 - `cargo check` ✅ — 0 errors, 14 existing warnings.
 - `npm run build` ✅ — Vite build passes.
+- `npm run tauri build -- --bundles nsis` ✅ — produced `Desktop Usage Helper_0.2.4_x64-setup.exe`.
+- Manual signer fallback ✅ — `npx tauri signer sign -k "$TAURI_SIGNING_PRIVATE_KEY" --password '' <exe>` produced `.sig` when build-time signing waited for a password prompt.
+- GitHub Release ✅ — https://github.com/andywongpt-my/desktop-usage-helper/releases/tag/v0.2.4
+- Updater manifest ✅ — `https://github.com/andywongpt-my/desktop-usage-helper/releases/latest/download/latest.json` returns version `0.2.4` and installer URL `.../v0.2.4/Desktop.Usage.Helper_0.2.4_x64-setup.exe`.
+- Git: `e5673cd` pushed to `main`.
+
+### P-21: GitHub `releases/latest/download/latest.json` redirect can lag behind Release API
+
+**Symptom:** GitHub API `GET /repos/:owner/:repo/releases/latest` reports the new release (v0.2.4), but `https://github.com/.../releases/latest/download/latest.json` still 302-redirects to the previous release asset (v0.2.3) for a short period.
+
+**Why it matters:** Tauri updater is configured to use the `/releases/latest/download/latest.json` convenience URL. If that redirect sticks to the old release, already-installed apps keep reading the old manifest even though the new release exists.
+
+**Fix / workaround used for v0.2.4:**
+1. Verify API latest:
+   ```bash
+   curl -H "Authorization: token $GITHUB_TOKEN" \
+     https://api.github.com/repos/andywongpt-my/desktop-usage-helper/releases/latest
+   ```
+2. Verify redirect target:
+   ```bash
+   curl -sI -L https://github.com/andywongpt-my/desktop-usage-helper/releases/latest/download/latest.json \
+     | grep -iE 'HTTP/|location:'
+   ```
+3. If redirect still points to old tag, either wait for GitHub cache to refresh or replace the old release's `latest.json` asset with the new manifest so the stale redirect still returns the new version.
+4. Re-check with:
+   ```bash
+   curl -sSL https://github.com/andywongpt-my/desktop-usage-helper/releases/latest/download/latest.json \
+     | python -c "import sys,json; j=json.load(sys.stdin); print(j['version'], j['platforms']['windows-x86_64']['url'])"
+   ```
+
+**Observed v0.2.4:** after replacing v0.2.3's stale `latest.json`, `/releases/latest/download/latest.json` returned `0.2.4`; shortly after, the redirect itself updated to `/releases/download/v0.2.4/latest.json`.
 
 ### T-10 — taste-skill chrome redesign ✅ 2026-06-22
 
