@@ -34,8 +34,18 @@ export default function SettingsModal({ onClose }) {
 
   const toggleEnabled = async (id, currentEnabled) => {
     try {
-      const updated = await setProviderEnabled(id, !currentEnabled);
+      const nextEnabled = !currentEnabled;
+      const updated = await setProviderEnabled(id, nextEnabled);
       useConfigStore.setState({ config: updated });
+      // Keep provider metadata in sync immediately. The checkbox and dashboard
+      // visibility are driven by useUsageStore.providers, while the persisted
+      // truth comes back through AppConfig. Without this, Enable appears to do
+      // nothing until the next list/refresh cycle or app restart.
+      useUsageStore.setState((state) => ({
+        providers: state.providers.map((p) =>
+          p.id === id ? { ...p, enabled: nextEnabled } : p
+        ),
+      }));
     } catch (err) {
       console.error("[Settings] toggle enabled failed:", err);
     }
@@ -409,6 +419,7 @@ export default function SettingsModal({ onClose }) {
               <div className="space-y-3">
                 {providers.map((p) => {
                   const userCfg = config.providers?.[p.id] ?? {};
+                  const enabled = userCfg.enabled ?? p.enabled;
                   const hasUserKey = !!userCfg.customApiKey;
                   const envPresent = p.envPresent ?? false;
                   const hasKey = hasUserKey || envPresent;
@@ -443,8 +454,8 @@ export default function SettingsModal({ onClose }) {
                         <label className="flex shrink-0 items-center gap-2 text-xs text-slate-400">
                           <input
                             type="checkbox"
-                            checked={p.enabled}
-                            onChange={() => toggleEnabled(p.id, p.enabled)}
+                            checked={!!enabled}
+                            onChange={() => toggleEnabled(p.id, !!enabled)}
                             className="accent-accent"
                           />
                           {t("settings.enabled")}

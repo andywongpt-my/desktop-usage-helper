@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Activity, Clock3 } from "lucide-react";
 import { useI18nStore } from "../stores/useI18nStore.js";
+import pkg from "../../package.json";
 
 function timeAgo(ts) {
   if (!ts) return "never";
@@ -27,7 +28,7 @@ export default function StatusBar({ lastRefresh, loading }) {
         {loading ? <Activity size={12} className="animate-pulse text-slate-300" /> : <Clock3 size={12} />}
         {loading ? t("status.refreshing") : t("status.last_refresh", timeAgo(lastRefresh))}
       </span>
-      <span className="hidden sm:inline">desktop-usage-helper v0.2.0</span>
+      <span className="hidden sm:inline">desktop-usage-helper v{pkg.version}</span>
     </footer>
   );
 }

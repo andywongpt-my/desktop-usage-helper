@@ -46,6 +46,7 @@ desktop-usage-helper.exe --service
 - `Provider` trait in `src-tauri/src/provider/mod.rs` is the only extension point for new vendors.
 - `#[async_trait]` macro required for any `async fn` in traits used as `dyn`.
 - HTTP calls always go through `ProviderContext.http` (shared `reqwest::Client`) — never instantiate new clients per fetch.
+- Ollama `/api/me` POSTs must include an explicit empty body (`.body("")`) so reqwest sends `Content-Length: 0`; otherwise Google frontend returns HTTP 411.
 - Errors bubble up via `AppError` (in `errors.rs`) which serializes to a string for Tauri commands.
 - Config persistence via `ConfigStore` (`config.rs`) backed by `tauri-plugin-store`. Never read/write the JSON directly from provider code.
 - **Config serialization is camelCase** (T-18): `AppConfig`, `ProviderUserConfig`, `AccountConfig` all use `#[serde(rename_all = "camelCase")]`. The `merge_into` function reads camelCase keys. JS frontend sends camelCase directly — no `serializePatch` conversion needed.
@@ -82,7 +83,7 @@ Vite is configured with `rollupOptions.input` for two entry points: `main` (inde
 
 ## TODO
 
-(Updated 2026-06-22, T-18)
+(Updated 2026-06-22, T-19)
 
 - [x] Tray icon + status menu (T-02) ✅
 - [x] Taste-skill chrome redesign with browser mock fallback (T-10) ✅
@@ -106,6 +107,7 @@ Vite is configured with `rollupOptions.input` for two entry points: `main` (inde
 - [x] v0.2.1 release — auto-updater + 5 new providers + fast compile (T-16) ✅
 - [x] v0.2.2 release — startup crash fix, ConfigStore type mismatch (T-17) ✅
 - [x] v0.2.3 release — automatic update on startup + camelCase config fix + new passwordless signing key (T-18) ✅
+- [x] MiniMax/Ollama HTTP 411 + Enable stale UI fix (T-19) ✅
 - [ ] Provider custom icon override (T-03)
 - [ ] CSV/JSON usage export (T-04)
 - [ ] OpenCode Zen OAuth (deferred — upstream blocker)

@@ -32,12 +32,14 @@ impl Provider for MinimaxProvider {
             )
         })?;
 
-        // Hit the same Ollama endpoint.
+        // Hit the same Ollama endpoint. Keep the explicit empty body so
+        // reqwest sends Content-Length: 0; otherwise Ollama returns HTTP 411.
         let resp = ctx
             .http
             .post("https://ollama.com/api/me")
             .bearer_auth(key)
             .header("Accept", "application/json")
+            .body("")
             .send()
             .await?;
         let status = resp.status();

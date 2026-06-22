@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-"""Publish GitHub Release v0.2.3 — creates release + uploads assets."""
+"""Publish GitHub Release v0.2.4 — creates release + uploads assets."""
 import subprocess, json, sys, os, urllib.parse, urllib.request
 
 REPO = "andywongpt-my/desktop-usage-helper"
-VERSION = "0.2.3"
+VERSION = "0.2.4"
 BUNDLE = r"C:\Users\andyw\desktop-usage-helper\src-tauri\target\release\bundle\nsis"
 
 # Get token from git credential store
@@ -26,18 +26,15 @@ print(f"Token length: {len(token)}")
 print(f"=== Creating release v{VERSION} ===")
 body_data = json.dumps({
     "tag_name": f"v{VERSION}",
-    "name": f"v{VERSION} — Automatic update on startup + camelCase config",
-    "body": """Desktop Usage Helper v0.2.3
-
-## New Features
-
-- **Automatic updates on startup**: App now silently checks for updates on launch and auto-installs them (configurable via `autoUpdate` setting, default: true)
-- **camelCase config**: Rust backend now serializes config as camelCase to match JS frontend — no more snake_case/camelCase mismatch
+    "name": f"v{VERSION} — MiniMax/Ollama HTTP 411 + Enable UI fix",
+    "body": """Desktop Usage Helper v0.2.4
 
 ## Fixes
 
-- Config fields from Rust now properly match JS frontend keys (was snake_case, now camelCase)
-- Sync import/export now uses consistent camelCase JSON
+- **MiniMax/Ollama HTTP 411**: Adds explicit empty POST body so `Content-Length: 0` is sent to `https://ollama.com/api/me`.
+- **Enable checkbox stale UI**: Settings now syncs provider metadata immediately after toggling Enable.
+- **Displayed app version**: Status bar now reads from `package.json` instead of hardcoding v0.2.0.
+
 """,
     "prerelease": False
 }).encode()

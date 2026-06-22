@@ -52,11 +52,15 @@ impl Provider for OllamaProvider {
         })?;
 
         // POST /api/me — GET returns 405 on Ollama's router.
+        // Ollama's Google frontend also rejects an empty POST if the request
+        // omits Content-Length (HTTP 411). reqwest does not emit that header
+        // for a body-less POST, so attach an explicit empty body.
         let resp = ctx
             .http
             .post(OLLAMA_ME_URL)
             .bearer_auth(api_key)
             .header("Accept", "application/json")
+            .body("")
             .send()
             .await?;
 

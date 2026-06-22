@@ -318,6 +318,25 @@ Key API entry points:
 - **P-19**: Encrypted signing key causes `tauri signer sign` to hang indefinitely (waits for password on stdin with no TTY). Fix: regenerate passwordless key with `CI=true npx tauri signer generate -w <path> -f`. Always check key content with `base64 -d` — if it says "rsign encrypted secret key", it needs a password.
 - **P-20**: `latest.json` is NOT auto-updated by `tauri build`. The build generates the `.exe` and `.sig`, but `latest.json` retains the previous version's content. Must manually create `latest.json` with the new version, signature (from `.sig` file), and download URL after each build.
 
+### T-19 — MiniMax/Ollama enable UX + HTTP 411 fix ✅ 2026-06-22
+
+- **Bug 1 — Enable looked stuck in Settings**: `SettingsModal` checkbox used `p.enabled` from `useUsageStore.providers`, but `set_provider_enabled` only updated `AppConfig`. The persisted value changed, yet the visible checkbox/dashboard metadata stayed stale until the next provider-list refresh or app restart.
+  - Fix: derive checkbox from `config.providers[id].enabled ?? p.enabled`.
+  - Fix: after `setProviderEnabled`, immediately patch `useUsageStore.providers[id].enabled` so dashboard visibility updates in the same render cycle.
+- **Bug 2 — MiniMax/Ollama card showed HTTP 411**: `reqwest.post(...).send()` with no body omits `Content-Length`. `https://ollama.com/api/me` is behind a Google frontend that rejects body-less POSTs without `Content-Length`, returning `411 Length Required` / `POST requests require a Content-length header`.
+  - Fix: add `.body("")` to both `ollama.rs` and `minimax.rs` POST requests so reqwest emits `Content-Length: 0`.
+
+Key API entry points:
+- `src/components/SettingsModal.jsx` → `toggleEnabled()` → `setProviderEnabled()` + `useUsageStore.setState()` metadata sync
+- `src-tauri/src/provider/ollama.rs` → `POST https://ollama.com/api/me` with explicit empty body
+- `src-tauri/src/provider/minimax.rs` → same Ollama endpoint with explicit empty body
+
+Verification:
+- `curl -X POST https://ollama.com/api/me` without `Content-Length` reproduced `HTTP/1.0 411 Length Required`.
+- `curl -X POST -H 'Content-Length: 0' https://ollama.com/api/me` returned `HTTP/1.1 401 Unauthorized` with dummy credentials, proving the 411 blocker is gone before auth validation.
+- `cargo check` ✅ — 0 errors, 14 existing warnings.
+- `npm run build` ✅ — Vite build passes.
+
 ### T-10 — taste-skill chrome redesign ✅ 2026-06-22
 
 - Redesign mode: **chrome-only product UI**. Rust polling, provider registry, tray notifier, IPC commands, and data flow were left untouched.
@@ -340,7 +359,7 @@ Pitfall added:
 
 | Provider | Endpoint | Auth | Status | Notes |
 |---|---|---|---|---|
-| Ollama Cloud | `POST /api/me` | Bearer | ✅ 200 | Returns `Plan`, `SubscriptionPeriodStart/End`, `ExtraUsageAutoReloadMonthlyLimit` |
+| Ollama Cloud | `POST /api/me` | Bearer | ✅ 200 | Requires explicit `Content-Length: 0` for empty POST. Returns `Plan`, `SubscriptionPeriodStart/End`, `ExtraUsageAutoReloadMonthlyLimit` |
 | Ollama (catalog) | `GET /v1/models` | Bearer | ✅ 200 | Used for auth check; lists `minimax-m2.5`, `kimi-k2.5`, etc. |
 | Ollama (chat) | `POST /v1/chat/completions` | Bearer | ✅ 200 | OpenAI-compatible; carries `usage` in body |
 | opencode Zen | `GET /zen-api/v1/usage` | Bearer | 🔒 403 | Cloudflare error 1010 bot-detection; needs OAuth |
@@ -380,17 +399,25 @@ Pitfall added:
 
 ## Critical Pitfalls
 
-### P-01: Ollama `/api/me` requires POST
+### P-01: Ollama `/api/me` requires POST + `Content-Length: 0`
 
 ```rust
 // ❌ returns 405 Method Not Allowed
 let resp = ctx.http.get("https://ollama.com/api/me").bearer_auth(key).send().await?;
 
-// ✅ returns 200 + JSON
+// ❌ returns 411 Length Required on current Ollama frontend
 let resp = ctx.http.post("https://ollama.com/api/me").bearer_auth(key).send().await?;
+
+// ✅ reaches auth/account handler; valid keys return 200 + JSON
+let resp = ctx.http
+    .post("https://ollama.com/api/me")
+    .bearer_auth(key)
+    .body("") // forces Content-Length: 0
+    .send()
+    .await?;
 ```
 
-Ollama's Go router only accepts POST for all `/api/*` account endpoints.
+Ollama's router only accepts POST for `/api/me`, and the Google frontend rejects an empty POST if `Content-Length` is omitted. In reqwest, a body-less `.post(...).send()` omits the header; attach `.body("")` to emit `Content-Length: 0`.
 
 ### P-02: MSYS `link.exe` shadows MSVC
 
