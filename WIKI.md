@@ -773,3 +773,24 @@ All 6 bugs from the v0.2.4 audit are now fixed and pushed.
 
 ### Commit
 `6472980` — "fix: resolve all 6 audit bugs" pushed to origin/main
+
+---
+
+## Session 2026-06-23 #3 — v0.2.5 release
+
+### What changed
+- Bumped version `0.2.4` → `0.2.5` in `package.json`, `tauri.conf.json`, `Cargo.toml`, `scripts/publish.py`
+- **Regenerated signing key** — old key was encrypted (`rsign encrypted secret key`), causing build to hang on password prompt. Regenerated with `CI=true npx tauri signer generate -w ~/.tauri/desktop-usage-helper.key -f`. New pubkey updated in `tauri.conf.json`.
+- **Signing key pitfall**: `TAURI_SIGNING_PRIVATE_KEY` must be passed via `export VAR=$(cat key)` AND `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` must be set (even empty) to skip interactive prompt.
+- Built NSIS installer + `.sig` signature
+- Manually generated `latest.json` (P-20: Tauri build does not auto-generate)
+- Published GitHub Release v0.2.5 with 3 assets:
+  - `Desktop.Usage.Helper_0.2.5_x64-setup.exe` (2.6 MB)
+  - `Desktop.Usage.Helper_0.2.5_x64-setup.exe.sig` (436 bytes)
+  - `latest.json` (784 bytes)
+
+### Release URL
+https://github.com/andywongpt-my/desktop-usage-helper/releases/tag/v0.2.5
+
+### Updater endpoint
+`https://github.com/andywongpt-my/desktop-usage-helper/releases/latest/download/latest.json` — unchanged, resolves to v0.2.5
