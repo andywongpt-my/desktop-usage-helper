@@ -84,11 +84,15 @@ pub fn run_with_options(opts: RunOptions) {
                 // Global hotkey: Ctrl+Shift+D toggles window.
                 use tauri_plugin_global_shortcut::GlobalShortcutExt;
                 let app_handle = app.handle().clone();
-                app.global_shortcut().on_shortcut("CmdOrCtrl+Shift+D", move |_app, _shortcut, event| {
+                // Best-effort: if the hotkey is already registered (e.g. another
+                // instance is still running), log a warning instead of panicking.
+                if let Err(e) = app.global_shortcut().on_shortcut("CmdOrCtrl+Shift+D", move |_app, _shortcut, event| {
                     if event.state == tauri_plugin_global_shortcut::ShortcutState::Pressed {
                         tray::toggle_main_window(&app_handle);
                     }
-                })?;
+                }) {
+                    tracing::warn!("global hotkey Ctrl+Shift+D not registered (another instance?): {e}");
+                }
             } else {
                 tracing::info!("running in headless service mode — no main window");
             }
