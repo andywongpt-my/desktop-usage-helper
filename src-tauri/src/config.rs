@@ -154,6 +154,9 @@ fn merge_into(target: &mut AppConfig, partial: serde_json::Value) {
             if let Some(arr) = val.get("tags").and_then(|x| x.as_array()) {
                 entry.tags = arr.iter().filter_map(|t| t.as_str().map(|s| s.to_string())).collect();
             }
+            if let Some(v) = val.get("hidden").and_then(|x| x.as_bool()) {
+                entry.hidden = v;
+            }
             if let Some(accs) = val.get("accounts").and_then(|x| x.as_array()) {
                 entry.accounts = accs.iter().filter_map(|a| {
                     Some(crate::models::AccountConfig {

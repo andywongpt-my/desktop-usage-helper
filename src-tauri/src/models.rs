@@ -125,6 +125,10 @@ pub struct ProviderUserConfig {
     /// Tags for grouping in the dashboard
     #[serde(default)]
     pub tags: Vec<String>,
+    /// If true, this provider is hidden from the dashboard (but still polled if enabled).
+    /// Used to declutter the card grid for providers the user doesn't actively use.
+    #[serde(default)]
+    pub hidden: bool,
 }
 
 impl Default for AppConfig {

@@ -66,6 +66,7 @@ export const enUS = {
   "settings.dnd_end": "End (HH:MM)",
   "settings.providers": "Providers",
   "settings.enabled": "enabled",
+  "settings.hide_from_dashboard": "hide from dashboard",
   "settings.no_key": "no key",
   "settings.key_set": "key set",
   "settings.add_account": "Add account",

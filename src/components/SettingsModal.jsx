@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, Eye, EyeOff, RotateCcw, CheckCircle2, XCircle, Bell, Power, TimerReset, Moon, MoonStar, Globe, Plus, Trash2, Cloud, Server, Tag } from "lucide-react";
+import { X, Eye, EyeOff, RotateCcw, CheckCircle2, XCircle, Bell, Power, TimerReset, Moon, MoonStar, Globe, Plus, Trash2, Cloud, Server, Tag, EyeOff as HideIcon } from "lucide-react";
 import { useConfigStore } from "../stores/useConfigStore.js";
 import { useUsageStore } from "../stores/useUsageStore.js";
 import { useI18nStore } from "../stores/useI18nStore.js";
@@ -367,6 +367,20 @@ export default function SettingsModal({ onClose }) {
                             className="accent-accent"
                           />
                           {t("settings.enabled")}
+                        </label>
+                      </div>
+
+                      {/* Hide toggle */}
+                      <div className="mb-3 flex items-center justify-end">
+                        <label className="flex items-center gap-1.5 text-[10px] text-slate-500">
+                          <input
+                            type="checkbox"
+                            checked={!!userCfg.hidden}
+                            onChange={(e) => setConfig({ providers: { [p.id]: { ...userCfg, hidden: e.target.checked } } })}
+                            className="accent-accent"
+                          />
+                          <HideIcon size={11} />
+                          {t("settings.hide_from_dashboard")}
                         </label>
                       </div>
 

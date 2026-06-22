@@ -66,6 +66,7 @@ export const zhCN = {
   "settings.dnd_end": "结束 (HH:MM)",
   "settings.providers": "供应商",
   "settings.enabled": "启用",
+  "settings.hide_from_dashboard": "从面板隐藏",
   "settings.no_key": "无密钥",
   "settings.key_set": "已设密钥",
   "settings.add_account": "添加账号",

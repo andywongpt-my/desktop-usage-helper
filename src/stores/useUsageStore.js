@@ -47,4 +47,14 @@ export const useUsageStore = create((set, get) => ({
         return a.label.localeCompare(b.label);
       });
   },
+
+  /** Get providers visible on the dashboard (enabled + not hidden). */
+  getDashboardProviders: (config) => {
+    const visible = get().getVisibleProviders();
+    if (!config?.providers) return visible;
+    return visible.filter((p) => {
+      const userCfg = config.providers[p.id] ?? {};
+      return !userCfg.hidden;
+    });
+  },
 }));

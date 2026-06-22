@@ -34,6 +34,11 @@ const mockProviders = [
   { id: "minimax", label: "MiniMax", kind: "credits", enabled: true, envVar: "MINIMAX_API_KEY", envPresent: false },
   { id: "codex", label: "Codex", kind: "local auth", enabled: true, envVar: "~/.codex/auth.json", envPresent: true },
   { id: "opencode", label: "OpenCode Zen", kind: "balance", enabled: true, envVar: "OPENCODE_ZEN_API_KEY", envPresent: false },
+  { id: "anthropic", label: "Claude / Anthropic", kind: "llm_api", enabled: false, envVar: "ANTHROPIC_API_KEY", envPresent: false },
+  { id: "openai", label: "OpenAI Platform", kind: "llm_api", enabled: false, envVar: "OPENAI_API_KEY", envPresent: false },
+  { id: "zai", label: "Z.ai / GLM", kind: "llm_api", enabled: false, envVar: "ZAI_API_KEY", envPresent: false },
+  { id: "cursor", label: "Cursor", kind: "subscription", enabled: false, envVar: null, envPresent: false },
+  { id: "github_copilot", label: "GitHub Copilot", kind: "subscription", enabled: false, envVar: "GITHUB_TOKEN", envPresent: false },
 ];
 
 const now = Date.now();

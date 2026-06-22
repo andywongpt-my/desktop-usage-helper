@@ -71,9 +71,9 @@ function ProviderGroup({ tag, providers, onRefresh }) {
 }
 
 export default function Dashboard({ onRefresh }) {
-  const providers = useUsageStore((s) => s.getVisibleProviders());
-  const isLoading = useUsageStore((s) => s.isLoading);
   const config = useConfigStore((s) => s.config);
+  const providers = useUsageStore((s) => s.getDashboardProviders(config));
+  const isLoading = useUsageStore((s) => s.isLoading);
   const t = useI18nStore((s) => s.t);
 
   useEffect(() => {

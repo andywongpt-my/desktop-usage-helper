@@ -56,6 +56,11 @@ pub mod ollama;
 pub mod opencode;
 pub mod minimax;
 pub mod codex;
+pub mod anthropic;
+pub mod openai;
+pub mod cursor;
+pub mod github_copilot;
+pub mod zai;
 
 pub mod registry;
 
@@ -68,6 +73,11 @@ pub fn build_registry() -> Vec<Arc<dyn Provider>> {
         Arc::new(opencode::OpencodeProvider),
         Arc::new(minimax::MinimaxProvider),
         Arc::new(codex::CodexProvider),
+        Arc::new(anthropic::AnthropicProvider),
+        Arc::new(openai::OpenaiProvider),
+        Arc::new(zai::ZaiProvider),
+        Arc::new(cursor::CursorProvider),
+        Arc::new(github_copilot::GithubCopilotProvider),
     ]
 }
 
