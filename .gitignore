@@ -20,3 +20,4 @@ fix_ico.py
 # Internal docs — keep local only, do not push to GitHub
 CLAUDE.md
 WIKI.md
+.hermes/
