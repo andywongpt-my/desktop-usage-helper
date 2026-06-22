@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { X, Eye, EyeOff, RotateCcw, CheckCircle2, XCircle, Bell, Power, TimerReset, Moon, MoonStar, Globe, Plus, Trash2, Cloud, Server, Tag, EyeOff as HideIcon } from "lucide-react";
+import { X, Eye, EyeOff, RotateCcw, CheckCircle2, XCircle, Bell, Power, TimerReset, Moon, MoonStar, Globe, Plus, Trash2, Cloud, Server, Tag, EyeOff as HideIcon, Download } from "lucide-react";
 import { useConfigStore } from "../stores/useConfigStore.js";
 import { useUsageStore } from "../stores/useUsageStore.js";
 import { useI18nStore } from "../stores/useI18nStore.js";
-import { setApiKey, setProviderEnabled, setAutostart, getAutostartStatus, syncExport, syncImport } from "../lib/tauri.js";
+import { setApiKey, setProviderEnabled, setAutostart, getAutostartStatus, syncExport, syncImport, checkForUpdates, downloadAndInstallUpdate } from "../lib/tauri.js";
 
 function Section({ icon: Icon, title, children }) {
   return (
@@ -28,6 +28,9 @@ export default function SettingsModal({ onClose }) {
   const setLanguage = useI18nStore((s) => s.setLanguage);
   const [showKeys, setShowKeys] = useState({});
   const [syncStatus, setSyncStatus] = useState(null);
+  const [updateStatus, setUpdateStatus] = useState(null); // null | "checking" | "available" | "downloading" | "done" | "error"
+  const [updateInfo, setUpdateInfo] = useState(null);
+  const [updateProgress, setUpdateProgress] = useState(0);
 
   const toggleEnabled = async (id, currentEnabled) => {
     try {
@@ -85,6 +88,35 @@ export default function SettingsModal({ onClose }) {
     } catch (err) {
       console.error("[Settings] sync pull failed:", err);
       setSyncStatus("error");
+    }
+  };
+
+  const handleCheckUpdate = async () => {
+    setUpdateStatus("checking");
+    setUpdateInfo(null);
+    try {
+      const update = await checkForUpdates();
+      if (!update) {
+        setUpdateStatus("none");
+      } else {
+        setUpdateInfo({ version: update.version, date: update.date, body: update.body });
+        setUpdateStatus("available");
+      }
+    } catch (err) {
+      console.error("[Settings] update check failed:", err);
+      setUpdateStatus("error");
+    }
+  };
+
+  const handleInstallUpdate = async () => {
+    setUpdateStatus("downloading");
+    setUpdateProgress(0);
+    try {
+      await downloadAndInstallUpdate((frac) => setUpdateProgress(frac));
+      setUpdateStatus("done");
+    } catch (err) {
+      console.error("[Settings] update install failed:", err);
+      setUpdateStatus("error");
     }
   };
 
@@ -315,6 +347,52 @@ export default function SettingsModal({ onClose }) {
                   {syncStatus === "pulled" && <p className="text-[10px] text-emerald-400">Pulled ✓</p>}
                   {syncStatus === "error" && <p className="text-[10px] text-rose-400">Failed — check console</p>}
                 </div>
+              </Section>
+
+              {/* Auto-update */}
+              <Section icon={Download} title="Updates">
+                <p className="mb-3 text-[11px] text-slate-600">
+                  Check for and install the latest version automatically.
+                </p>
+                {updateStatus === "available" && updateInfo && (
+                  <div className="mb-3 rounded-lg border border-white/10 bg-slate-950/50 p-3">
+                    <p className="text-xs text-slate-300">
+                      <span className="font-semibold text-white">v{updateInfo.version}</span>
+                      {updateInfo.date && <span className="text-slate-500"> · {updateInfo.date}</span>}
+                    </p>
+                    {updateInfo.body && (
+                      <p className="mt-1.5 whitespace-pre-wrap text-[11px] leading-4 text-slate-500 line-clamp-6">
+                        {updateInfo.body}
+                      </p>
+                    )}
+                  </div>
+                )}
+                {updateStatus === "downloading" && (
+                  <div className="mb-3">
+                    <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                      <div
+                        className="h-full rounded-full bg-accent transition-all"
+                        style={{ width: `${Math.round(updateProgress * 100)}%` }}
+                      />
+                    </div>
+                    <p className="mt-1 text-[10px] text-slate-500">{Math.round(updateProgress * 100)}%</p>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  {updateStatus === "available" ? (
+                    <button onClick={handleInstallUpdate} className="chrome-button primary-action" disabled={updateStatus === "downloading"}>
+                      <Download size={13} />
+                      {updateStatus === "downloading" ? "Installing..." : "Download & Install"}
+                    </button>
+                  ) : (
+                    <button onClick={handleCheckUpdate} className="chrome-button primary-action" disabled={updateStatus === "checking"}>
+                      {updateStatus === "checking" ? "Checking..." : "Check for Updates"}
+                    </button>
+                  )}
+                </div>
+                {updateStatus === "none" && <p className="mt-2 text-[10px] text-emerald-400">You're on the latest version ✓</p>}
+                {updateStatus === "done" && <p className="mt-2 text-[10px] text-emerald-400">Update installed — restarting... ✓</p>}
+                {updateStatus === "error" && <p className="mt-2 text-[10px] text-rose-400">Update failed — check console</p>}
               </Section>
 
               {/* Service mode info */}

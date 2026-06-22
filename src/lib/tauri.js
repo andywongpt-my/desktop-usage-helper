@@ -167,6 +167,36 @@ export async function ping() {
   return await call("ping", undefined, "pong");
 }
 
+// ── Auto-updater ──────────────────────────────────────────────
+// In browser dev mode (no Tauri runtime), these return safe fallbacks.
+
+export async function checkForUpdates() {
+  if (!isTauriRuntime()) return null;
+  const { check } = await import("@tauri-apps/plugin-updater");
+  return await check();
+}
+
+export async function downloadAndInstallUpdate(onProgress) {
+  if (!isTauriRuntime()) return;
+  const { check } = await import("@tauri-apps/plugin-updater");
+  const update = await check();
+  if (!update) return;
+  let total = 0, downloaded = 0;
+  await update.downloadAndInstall((event) => {
+    if (event.event === "Started" && event.data.contentLength) {
+      total = event.data.contentLength;
+    } else if (event.event === "Progress") {
+      downloaded += event.data.chunkLength;
+      if (onProgress) onProgress(total ? downloaded / total : 0);
+    } else if (event.event === "Finished" && onProgress) {
+      onProgress(1);
+    }
+  });
+  // Restart the app to apply the update.
+  const { relaunch } = await import("@tauri-apps/plugin-process");
+  await relaunch();
+}
+
 export async function showWindow() {
   return await call("show_window", undefined, null);
 }

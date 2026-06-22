@@ -1,0 +1,11 @@
+[target.x86_64-pc-windows-msvc]
+linker = "rust-lld"
+rustflags = ["-C", "link-arg=/MANIFEST:NO"]
+
+[profile.release]
+opt-level = "s"
+lto = false
+codegen-units = 16
+strip = "symbols"
+panic = "abort"
+incremental = false
