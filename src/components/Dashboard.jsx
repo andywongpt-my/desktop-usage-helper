@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Activity, AlertTriangle, CheckCircle2, HelpCircle, ChevronDown } from "lucide-react";
 import { useUsageStore } from "../stores/useUsageStore.js";
 import { useI18nStore } from "../stores/useI18nStore.js";
@@ -76,8 +76,14 @@ export default function Dashboard({ onRefresh }) {
   const isLoading = useUsageStore((s) => s.isLoading);
   const t = useI18nStore((s) => s.t);
 
+  const lastRefreshRef = useRef(0);
+
   useEffect(() => {
     const onFocus = async () => {
+      // Debounce: skip if refreshed within last 30s (Rust poll loop already covers periodic refresh)
+      const now = Date.now();
+      if (now - lastRefreshRef.current < 30_000) return;
+      lastRefreshRef.current = now;
       if (typeof onRefresh === "function") {
         try {
           await onRefresh();

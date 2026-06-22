@@ -18,8 +18,8 @@ export default function StatusBar({ lastRefresh, loading }) {
   const [, setTick] = useState(0);
   const t = useI18nStore((s) => s.t);
   useEffect(() => {
-    const t = setInterval(() => setTick((n) => n + 1), 1000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setTick((n) => n + 1), 1000);
+    return () => clearInterval(timer);
   }, []);
 
   return (

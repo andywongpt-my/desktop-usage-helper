@@ -78,8 +78,11 @@ pub async fn export_to_gist(
         files,
     };
 
+    // GitHub Gist API: POST creates a new gist, PATCH updates an existing one.
+    let is_new = gist_id.is_none();
+    let method = if is_new { reqwest::Method::POST } else { reqwest::Method::PATCH };
     let resp = client
-        .patch(&url)
+        .request(method, &url)
         .bearer_auth(token)
         .json(&payload)
         .send()

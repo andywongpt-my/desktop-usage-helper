@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { CheckCircle2, AlertTriangle, XCircle, HelpCircle, Clock, Activity, ChevronDown, TrendingUp, DollarSign } from "lucide-react";
 import TrendChart from "./TrendChart.jsx";
 import { useUsageStore } from "../stores/useUsageStore.js";
@@ -115,26 +115,27 @@ export default function ProviderCard({ provider }) {
   const secondaryMetric = status?.secondary;
   const costEstimate = status?.costEstimate;
 
-  const loadTrend = async () => {
+  const loadTrend = useCallback(async (hours) => {
+    const range = hours ?? trendRange;
     const cached = historyCache[provider.id];
     if (cached && Date.now() - cached.fetchedAt < 60_000) {
       setTrendData(cached.points);
       return;
     }
     try {
-      const points = await getHistory(provider.id, trendRange);
+      const points = await getHistory(provider.id, range);
       setTrendData(points);
       setHistory(provider.id, points);
     } catch (e) {
       console.error("[ProviderCard] getHistory failed:", e);
     }
-  };
+  }, [provider.id, trendRange, historyCache, setHistory]);
 
   useEffect(() => {
     if (showTrend && !trendData) {
       loadTrend();
     }
-  }, [showTrend]);
+  }, [showTrend, trendData, loadTrend]);
 
   const handleTrendToggle = () => {
     if (!showTrend && !trendData) {
@@ -146,7 +147,7 @@ export default function ProviderCard({ provider }) {
   const handleRangeChange = (hours) => {
     setTrendRange(hours);
     setTrendData(null);
-    if (showTrend) loadTrend();
+    if (showTrend) loadTrend(hours);
   };
 
   return (
