@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Activity, Clock3 } from "lucide-react";
+import { useI18nStore } from "../stores/useI18nStore.js";
 
 function timeAgo(ts) {
   if (!ts) return "never";
@@ -14,6 +15,7 @@ function timeAgo(ts) {
 
 export default function StatusBar({ lastRefresh, loading }) {
   const [, setTick] = useState(0);
+  const t = useI18nStore((s) => s.t);
   useEffect(() => {
     const t = setInterval(() => setTick((n) => n + 1), 1000);
     return () => clearInterval(t);
@@ -23,9 +25,9 @@ export default function StatusBar({ lastRefresh, loading }) {
     <footer className="statusbar">
       <span className="inline-flex items-center gap-1.5">
         {loading ? <Activity size={12} className="animate-pulse text-slate-300" /> : <Clock3 size={12} />}
-        {loading ? "refreshing" : `last refresh: ${timeAgo(lastRefresh)}`}
+        {loading ? t("status.refreshing") : t("status.last_refresh", timeAgo(lastRefresh))}
       </span>
-      <span className="hidden sm:inline">desktop-usage-helper v0.1.0</span>
+      <span className="hidden sm:inline">desktop-usage-helper v0.2.0</span>
     </footer>
   );
 }

@@ -17,9 +17,17 @@ export const useConfigStore = create((set) => ({
     notifyEnabled: true,
     autostartEnabled: false,
     minimizeToTray: true,
-    providers: {}, // id → { enabled, customLabel?, customApiKey? }
+    startupDelaySec: 0,
+    language: "en-US",
+    theme: "dark",
+    dndStart: null,
+    dndEnd: null,
+    hotkey: "CmdOrCtrl+Shift+D",
+    syncGistToken: null,
+    syncGistId: null,
+    providers: {},
   },
-  envKeys: [], // [{ id, envVar, present }]
+  envKeys: [],
 
   load: async () => {
     const [cfg, env] = await Promise.all([getConfig(), checkEnvKeys()]);

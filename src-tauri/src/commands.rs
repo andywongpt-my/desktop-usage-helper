@@ -13,6 +13,36 @@ pub fn show_window(app: AppHandle) {
     crate::tray::show_main_window(&app);
 }
 
+/// Toggle the widget window visibility.
+#[tauri::command]
+pub fn toggle_widget(app: AppHandle) {
+    if let Some(window) = app.get_webview_window("widget") {
+        let visible = window.is_visible().unwrap_or(false);
+        if visible {
+            let _ = window.hide();
+        } else {
+            let _ = window.show();
+            let _ = window.set_focus();
+        }
+    } else {
+        // Create the widget window
+        use tauri::WebviewWindowBuilder;
+        let _ = WebviewWindowBuilder::new(
+            &app,
+            "widget",
+            tauri::WebviewUrl::App("widget.html".into()),
+        )
+        .title("Usage Helper Widget")
+        .inner_size(320.0, 200.0)
+        .decorations(false)
+        .always_on_top(true)
+        .resizable(false)
+        .skip_taskbar(true)
+        .center()
+        .build();
+    }
+}
+
 #[tauri::command]
 pub fn ping() -> String {
     "pong".into()
@@ -28,11 +58,7 @@ pub async fn list_providers(app: AppHandle) -> AppResult<Vec<ProviderMeta>> {
 
 #[tauri::command]
 pub async fn refresh_all(app: AppHandle) -> AppResult<RefreshResult> {
-    // Trigger an immediate refresh via the poll module — same path the tray menu uses.
-    // Returns the latest snapshot synchronously for the caller.
     let result = do_refresh_all(&app).await?;
-    // Also push the new statuses to the frontend so a manual click refreshes the UI
-    // even if the renderer missed the background emit.
     if let Ok(json) = serde_json::to_string(&result.statuses) {
         use tauri::Emitter;
         let _ = app.emit("usage:statuses", json);
@@ -95,9 +121,6 @@ pub async fn set_provider_api_key(
     cfg_store.set_provider_api_key(&store, &id, &api_key).await
 }
 
-/// Toggle the OS-level autostart (Windows: registry Run key).
-/// Persists the new state to the config store AFTER the OS call succeeds —
-/// that way a denied toggle doesn't leave a "true" config behind.
 #[tauri::command]
 pub async fn set_autostart(app: AppHandle, enabled: bool) -> AppResult<AppConfig> {
     let manager = app.autolaunch();
@@ -120,8 +143,6 @@ pub async fn set_autostart(app: AppHandle, enabled: bool) -> AppResult<AppConfig
     Ok(cfg)
 }
 
-/// Return whether autostart is currently enabled in the OS (independent of
-/// the cached config flag, in case they get out of sync).
 #[tauri::command]
 pub fn get_autostart_status(app: AppHandle) -> bool {
     app.autolaunch().is_enabled().unwrap_or(false)
@@ -148,4 +169,47 @@ pub fn check_env_keys(app: AppHandle) -> Vec<EnvKeyStatus> {
             })
         })
         .collect()
+}
+
+/// Get usage history for a provider (for trend charts).
+#[tauri::command]
+pub async fn get_history(
+    app: AppHandle,
+    id: String,
+    hours: Option<u32>,
+) -> AppResult<Vec<crate::history::HistoryPoint>> {
+    let h = hours.unwrap_or(24);
+    Ok(crate::history::query_range(&app, &id, h).await)
+}
+
+/// Export config + history to GitHub Gist.
+#[tauri::command]
+pub async fn sync_export(app: AppHandle) -> AppResult<String> {
+    let cfg_store = app.state::<crate::config::ConfigStore>();
+    let cfg = cfg_store.snapshot().await;
+    let token = cfg.sync_gist_token.as_deref()
+        .ok_or_else(|| AppError::Config("no GitHub token set".into()))?;
+    let gist_id = cfg.sync_gist_id.as_deref();
+    let result = crate::sync::export_to_gist(&app, token, gist_id, &cfg).await?;
+    // If new gist was created, persist the ID
+    if cfg.sync_gist_id.is_none() {
+        let store = app.store("config.json")
+            .map_err(|e| AppError::Config(e.to_string()))?;
+        let mut cfg2 = cfg_store.snapshot().await;
+        cfg2.sync_gist_id = Some(result.clone());
+        crate::config::persist(&store, &cfg2).map_err(AppError::Config)?;
+    }
+    Ok(result)
+}
+
+/// Import config + history from GitHub Gist.
+#[tauri::command]
+pub async fn sync_import(app: AppHandle) -> AppResult<AppConfig> {
+    let cfg_store = app.state::<crate::config::ConfigStore>();
+    let cfg = cfg_store.snapshot().await;
+    let token = cfg.sync_gist_token.as_deref()
+        .ok_or_else(|| AppError::Config("no GitHub token set".into()))?;
+    let gist_id = cfg.sync_gist_id.as_deref()
+        .ok_or_else(|| AppError::Config("no Gist ID set".into()))?;
+    crate::sync::import_from_gist(&app, token, gist_id).await
 }

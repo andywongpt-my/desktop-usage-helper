@@ -128,6 +128,9 @@ pub async fn refresh_all(
                 error: Some(e.to_string()),
                 fetched_at: chrono::Utc::now().timestamp_millis(),
                 latency_ms,
+                account_label: None,
+                tags: vec![],
+                cost_estimate: None,
             },
         };
         statuses.insert(id, entry);

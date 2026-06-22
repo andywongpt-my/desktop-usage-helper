@@ -5,6 +5,8 @@ import StatusBar from "./components/StatusBar.jsx";
 import SettingsModal from "./components/SettingsModal.jsx";
 import { useUsageStore } from "./stores/useUsageStore.js";
 import { useConfigStore } from "./stores/useConfigStore.js";
+import { useI18nStore } from "./stores/useI18nStore.js";
+import { useThemeStore } from "./stores/useThemeStore.js";
 import {
   listProviders,
   refreshAll,
@@ -19,6 +21,9 @@ export default function App() {
   const lastRefresh = useUsageStore((s) => s.lastRefresh);
   const isLoading = useUsageStore((s) => s.isLoading);
   const configLoaded = useConfigStore((s) => s.loaded);
+  const config = useConfigStore((s) => s.config);
+  const setLanguage = useI18nStore((s) => s.setLanguage);
+  const setTheme = useThemeStore((s) => s.setTheme);
   const [showSettings, setShowSettings] = useState(false);
   const refreshInFlight = useRef(false);
 
@@ -39,11 +44,15 @@ export default function App() {
     }
   }, [setStatuses, setProviders]);
 
+  // Initial load: config + providers + first refresh
   useEffect(() => {
     let cancelled = false;
     (async () => {
       await useConfigStore.getState().load();
       if (cancelled) return;
+      const cfg = useConfigStore.getState().config;
+      setLanguage(cfg.language || "en-US");
+      setTheme(cfg.theme || "dark");
       try {
         const [result, providers] = await Promise.all([
           refreshAll(),
@@ -59,7 +68,17 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [setStatuses, setProviders]);
+  }, [setStatuses, setProviders, setLanguage, setTheme]);
+
+  // Apply language when config changes
+  useEffect(() => {
+    if (config.language) setLanguage(config.language);
+  }, [config.language, setLanguage]);
+
+  // Apply theme when config changes
+  useEffect(() => {
+    if (config.theme) setTheme(config.theme);
+  }, [config.theme, setTheme]);
 
   useEffect(() => {
     let unlisten;

@@ -110,6 +110,9 @@ fn build_status_from_payload(
         error: None,
         fetched_at: now_ms(),
         latency_ms,
+        account_label: None,
+        tags: vec![],
+        cost_estimate: None,
     }
 }
 

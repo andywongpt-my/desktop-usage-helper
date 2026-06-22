@@ -8,11 +8,18 @@ use tauri::{AppHandle, Emitter, Manager};
 /// On every successful refresh:
 ///   1. Emit `usage:statuses` (consumed by the frontend store + notifier).
 ///   2. Update the tray icon + tooltip (driven from the notifier listener).
-pub fn spawn(app: AppHandle) {
+///   3. Insert a snapshot into the history DB (for trend charts).
+pub fn spawn(app: AppHandle, headless: bool) {
     tauri::async_runtime::spawn(async move {
-        // Initial refresh — fire immediately so the UI has data on first frame.
-        // Skip if the registry is empty (no providers registered yet — shouldn't happen).
-        let initial_delay = Duration::from_millis(50);
+        // Initial delay — respects startup_delay_sec config (default 0 = immediate).
+        // In headless mode we always wait at least 5s to let the DB migrate.
+        let cfg_store = app.state::<crate::config::ConfigStore>();
+        let cfg = cfg_store.snapshot().await;
+        let initial_delay = if headless {
+            Duration::from_secs(5).max(Duration::from_secs(cfg.startup_delay_sec))
+        } else {
+            Duration::from_millis(50).max(Duration::from_secs(cfg.startup_delay_sec))
+        };
         tokio::time::sleep(initial_delay).await;
 
         loop {
@@ -26,6 +33,8 @@ pub fn spawn(app: AppHandle) {
                     if let Ok(json) = serde_json::to_string(&statuses) {
                         let _ = app.emit("usage:statuses", json);
                     }
+                    // Insert into history DB for trend charts.
+                    crate::history::insert_snapshot(&app, &statuses).await;
                     tracing::debug!(
                         "poll cycle complete in {:?} ({} providers)",
                         snapshot_started.elapsed(),

@@ -54,6 +54,154 @@ Modified files:
 - `src/stores/useUsageStore.js` — `setSnapshot()` for atomic refresh
 - `src/stores/useConfigStore.js` — added `toastThresholdPct: 20`, `minimizeToTray: true` defaults
 
+### T-12 — Mega feature batch (12 features) ✅ 2026-06-22
+
+Version bumped to 0.2.0. 12 new features landed in one batch:
+
+#### F1 — Usage trend history
+- New `src-tauri/src/history.rs` — file-based history store (`history.json` in app data dir), 7-day retention.
+- Poll loop calls `history::insert_snapshot()` after every refresh.
+- New `get_history(id, hours)` Tauri command → `getHistory()` in `src/lib/tauri.js`.
+- New `src/components/TrendChart.jsx` — inline SVG sparkline with area fill, color-coded by remaining%.
+- ProviderCard has expandable trend section with 1h / 6h / 24h / 7d range buttons.
+
+#### F2 — Multi-account support
+- `ProviderUserConfig` now has `accounts: Vec<AccountConfig>` where `AccountConfig = { label, api_key, enabled }`.
+- SettingsModal has "Add account" button per provider, with label + key inputs and remove button.
+- ProviderStatus carries `account_label: Option<String>` (displayed in card subtitle).
+
+#### F3 — Cost estimate
+- `ProviderUserConfig` now has `cost_per_unit: Option<f64>`.
+- SettingsModal has price input per provider (optional).
+- ProviderStatus carries `cost_estimate: Option<f64>` → ProviderCard shows "≈ $X.XX / month".
+
+#### F4 — Startup delay
+- `AppConfig.startup_delay_sec: u64` (default 0 = immediate).
+- Poll loop uses this for initial sleep instead of hardcoded 50ms.
+- Settings UI: new "Startup delay" input in Refresh section.
+
+#### F6 — Global hotkey
+- Added `tauri-plugin-global-shortcut` to Cargo.toml + capabilities.
+- `Ctrl+Shift+D` toggles main window visibility from anywhere.
+- Registered in `lib.rs` setup via `app.global_shortcut().on_shortcut()`.
+
+#### F7 — Dark/light theme toggle
+- `AppConfig.theme: String` (default "dark").
+- New `src/stores/useThemeStore.js` — applies/removes `light` class on `<html>`.
+- Comprehensive light theme CSS overrides in `index.css` via `html.light` selectors.
+- TopBar has Sun/Moon toggle button that persists to config.
+
+#### F8 — DND notification periods
+- `AppConfig.dnd_start: Option<String>` + `dnd_end: Option<String>` (HH:MM format).
+- `notify.rs` checks DND window before firing toast — supports overnight ranges (e.g. 23:00→08:00).
+- Settings UI: time inputs in Alert thresholds section.
+
+#### F9 — Provider grouping + folding
+- `ProviderUserConfig.tags: Vec<String>` — comma-separated tags in Settings.
+- Dashboard groups visible providers by first tag, with collapsible section headers.
+- Ungrouped providers go to "__ungrouped" (no header shown).
+
+#### F11 — Widget mode
+- New `widget.html` + `src/widget/WidgetApp.jsx` + `src/widget/main.jsx` — compact always-on-top mini window.
+- Vite `rollupOptions.input` configured for multi-page build (main + widget).
+- `toggle_widget` Tauri command creates/shows/hides a 320×200 borderless always-on-top window.
+- TopBar has LayoutGrid button to toggle widget.
+
+#### F13 — Cross-device sync (GitHub Gist)
+- New `src-tauri/src/sync.rs` — export config + history to private Gist, import back.
+- `AppConfig.sync_gist_token` + `sync_gist_id` — stored in config.
+- New `sync_export` + `sync_import` Tauri commands.
+- Settings UI: token + Gist ID inputs + Push/Pull buttons.
+
+#### F14 — i18n (zh-CN + en-US)
+- `AppConfig.language: String` (default "en-US").
+- New `src/i18n/en-US.js` + `src/i18n/zh-CN.js` — full string dictionaries.
+- New `src/stores/useI18nStore.js` — Zustand store with `t(key, ...args)` function.
+- All frontend components use `t()` for display strings.
+- `src-tauri/src/i18n.rs` — Rust-side language enum for tray menu / notification text.
+- Settings UI: English / 中文 language buttons.
+
+#### F12 — Windows Service mode
+- `main.rs` detects `--service` CLI flag → calls `run_with_options(RunOptions { headless: true })`.
+- `lib.rs` extracted `run_with_options()` — skips window creation in headless mode, still creates tray + poll + notify.
+- Settings UI: informational note about `desktop-usage-helper.exe --service`.
+
+### New config fields (all backward compatible via merge_into)
+
+| Field | Type | Default | Purpose |
+|---|---|---|---|
+| `startup_delay_sec` | u64 | 0 | Delay before first poll |
+| `language` | String | "en-US" | UI language |
+| `theme` | String | "dark" | UI theme |
+| `dnd_start` | Option<String> | None | DND start (HH:MM) |
+| `dnd_end` | Option<String> | None | DND end (HH:MM) |
+| `hotkey` | String | "CmdOrCtrl+Shift+D" | Global hotkey |
+| `sync_gist_token` | Option<String> | None | GitHub token for sync |
+| `sync_gist_id` | Option<String> | None | Gist ID for sync |
+
+### New ProviderUserConfig fields
+
+| Field | Type | Default | Purpose |
+|---|---|---|---|
+| `accounts` | Vec<AccountConfig> | [] | Multi-account API keys |
+| `cost_per_unit` | Option<f64> | None | Price for cost estimate |
+| `tags` | Vec<String> | [] | Grouping tags |
+
+### New ProviderStatus fields
+
+| Field | Type | Purpose |
+|---|---|---|
+| `account_label` | Option<String> | Account label for multi-account |
+| `tags` | Vec<String> | Tags from config |
+| `cost_estimate` | Option<f64> | Monthly cost estimate |
+
+### New files
+
+- `src-tauri/src/history.rs` — file-based usage history store
+- `src-tauri/src/sync.rs` — GitHub Gist sync
+- `src-tauri/src/service.rs` — headless service mode entry
+- `src-tauri/src/i18n.rs` — Rust-side language enum
+- `src/i18n/en-US.js` — English strings
+- `src/i18n/zh-CN.js` — Chinese strings
+- `src/stores/useI18nStore.js` — i18n Zustand store
+- `src/stores/useThemeStore.js` — theme Zustand store
+- `src/components/TrendChart.jsx` — SVG sparkline
+- `src/widget/main.jsx` — widget entry point
+- `src/widget/WidgetApp.jsx` — compact widget app
+- `widget.html` — widget HTML entry
+
+### Modified files
+
+- `src-tauri/Cargo.toml` — version 0.2.0, added `tauri-plugin-global-shortcut`, removed `tauri-plugin-sql` (history is file-based)
+- `src-tauri/tauri.conf.json` — version 0.2.0, windows includes "widget"
+- `src-tauri/capabilities/default.json` — added window + global-shortcut permissions
+- `src-tauri/src/lib.rs` — `run_with_options()`, history store, global shortcut, headless mode
+- `src-tauri/src/main.rs` — `--service` flag detection
+- `src-tauri/src/models.rs` — new config + status fields
+- `src-tauri/src/config.rs` — merge_into handles all new fields
+- `src-tauri/src/commands.rs` — `get_history`, `toggle_widget`, `sync_export`, `sync_import`
+- `src-tauri/src/poll.rs` — startup delay, history insert, headless param
+- `src-tauri/src/notify.rs` — DND window check
+- `src-tauri/src/tray.rs` — `toggle_main_window` made pub
+- `src-tauri/src/provider/*.rs` — all 4 providers + registry add new ProviderStatus fields
+- `src/App.jsx` — language + theme application, config store wiring
+- `src/lib/tauri.js` — `getHistory()`, `toggleWidget()`, `syncExport()`, `syncImport()` + mocks
+- `src/components/TopBar.jsx` — theme toggle, widget toggle, i18n strings
+- `src/components/Dashboard.jsx` — provider grouping by tags, collapsible groups
+- `src/components/ProviderCard.jsx` — trend chart, cost estimate, account label, i18n
+- `src/components/SettingsModal.jsx` — all new settings sections (DND, language, sync, service, startup delay, multi-account, cost, tags)
+- `src/components/StatusBar.jsx` — i18n strings
+- `src/stores/useConfigStore.js` — new config defaults
+- `src/stores/useUsageStore.js` — history cache
+- `src/index.css` — light theme overrides + widget styles
+- `vite.config.js` — multi-page build (main + widget)
+- `package.json` — version 0.2.0
+
+### Build verification
+
+- `cargo check` ✅ — 0 errors, 11 warnings (unused fields/functions — expected for new code)
+- `npm run build` ✅ — Vite 5.4.21, 1611 modules, built in 3.26s, produces `dist/index.html` + `dist/widget.html`
+
 ### T-10 — taste-skill chrome redesign ✅ 2026-06-22
 
 - Redesign mode: **chrome-only product UI**. Rust polling, provider registry, tray notifier, IPC commands, and data flow were left untouched.

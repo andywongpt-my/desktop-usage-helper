@@ -4,10 +4,14 @@
 mod commands;
 mod config;
 mod errors;
+mod history;
+mod i18n;
 mod models;
 mod notify;
 mod poll;
 mod provider;
+mod service;
+mod sync;
 mod tray;
 
 use std::sync::Arc;
@@ -17,15 +21,28 @@ use tauri_plugin_store::StoreExt;
 
 pub use errors::{AppError, AppResult};
 
+/// Options for how to run the app.
+#[derive(Debug, Clone, Default)]
+pub struct RunOptions {
+    /// If true, skip creating the main window (service mode).
+    pub headless: bool,
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Logging — visible in `cargo tauri dev` console + Windows Event Log.
+    run_with_options(RunOptions::default());
+}
+
+pub fn run_with_options(opts: RunOptions) {
+    // Logging
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
                 .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info,desktop_usage_helper_lib=debug")),
         )
         .init();
+
+    let headless = opts.headless;
 
     tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::new().build())
@@ -34,39 +51,58 @@ pub fn run() {
             MacosLauncher::LaunchAgent,
             Some(vec![]),
         ))
-        .setup(|app| {
-            // Initialize the global registry once and stash it in Tauri's state.
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .setup(move |app| {
+            // Initialize the global registry.
             let registry = provider::build_registry();
             let registry_len = registry.len();
             let registry_wrapper = provider::ProviderRegistry::new(registry);
             app.manage(registry_wrapper);
 
-            // Initialize config store (loads from disk; falls back to defaults).
+            // Initialize config store.
             let store = app.store("config.json")?;
             let cfg_store = config::ConfigStore::new(store);
             let cfg_store_arc = Arc::new(cfg_store);
             app.manage(cfg_store_arc.clone());
 
-            // ---- Tray icon + context menu ----
+            // Initialize history store (file-based, for trend charts).
+            let history_store = Arc::new(history::HistoryStore::new(app.handle()));
+            app.manage(history_store);
+
+            // Tray icon + context menu.
             let tray = tray::install(&app.handle())?;
             app.manage(tray);
 
-            // ---- Close-to-tray wiring on the main window ----
-            if let Some(window) = app.get_webview_window("main") {
-                tray::setup_close_to_tray(window, cfg_store_arc.clone());
+            if !headless {
+                // Close-to-tray wiring.
+                if let Some(window) = app.get_webview_window("main") {
+                    tray::setup_close_to_tray(window, cfg_store_arc.clone());
+                } else {
+                    tracing::warn!("main window not found at setup — close-to-tray disabled");
+                }
+
+                // Global hotkey: Ctrl+Shift+D toggles window.
+                use tauri_plugin_global_shortcut::GlobalShortcutExt;
+                let app_handle = app.handle().clone();
+                app.global_shortcut().on_shortcut("CmdOrCtrl+Shift+D", move |_app, _shortcut, event| {
+                    if event.state == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                        tray::toggle_main_window(&app_handle);
+                    }
+                })?;
             } else {
-                tracing::warn!("main window not found at setup — close-to-tray disabled");
+                tracing::info!("running in headless service mode — no main window");
             }
 
-            // ---- Background notifier (toast + tray updates on threshold crossings) ----
+            // Background notifier (toast + tray updates).
             notify::spawn(app.handle().clone());
 
-            // ---- Background poll loop (drives refresh + emits usage:statuses) ----
-            poll::spawn(app.handle().clone());
+            // Background poll loop.
+            poll::spawn(app.handle().clone(), headless);
 
             tracing::info!(
-                "desktop-usage-helper started with {} providers",
-                registry_len
+                "desktop-usage-helper started with {} providers (headless={})",
+                registry_len,
+                headless
             );
             Ok(())
         })
@@ -83,6 +119,10 @@ pub fn run() {
             commands::get_autostart_status,
             commands::check_env_keys,
             commands::show_window,
+            commands::get_history,
+            commands::toggle_widget,
+            commands::sync_export,
+            commands::sync_import,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

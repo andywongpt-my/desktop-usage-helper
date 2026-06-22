@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { X, Eye, EyeOff, RotateCcw, CheckCircle2, XCircle, Bell, Power, TimerReset } from "lucide-react";
+import { X, Eye, EyeOff, RotateCcw, CheckCircle2, XCircle, Bell, Power, TimerReset, Moon, MoonStar, Globe, Plus, Trash2, Cloud, Server, Tag } from "lucide-react";
 import { useConfigStore } from "../stores/useConfigStore.js";
 import { useUsageStore } from "../stores/useUsageStore.js";
-import { setApiKey, setProviderEnabled, setAutostart, getAutostartStatus } from "../lib/tauri.js";
+import { useI18nStore } from "../stores/useI18nStore.js";
+import { setApiKey, setProviderEnabled, setAutostart, getAutostartStatus, syncExport, syncImport } from "../lib/tauri.js";
 
 function Section({ icon: Icon, title, children }) {
   return (
@@ -23,7 +24,10 @@ export default function SettingsModal({ onClose }) {
   const setConfig = useConfigStore((s) => s.setConfig);
   const refreshEnv = useConfigStore((s) => s.refreshEnvKeys);
   const providers = useUsageStore((s) => s.providers);
+  const t = useI18nStore((s) => s.t);
+  const setLanguage = useI18nStore((s) => s.setLanguage);
   const [showKeys, setShowKeys] = useState({});
+  const [syncStatus, setSyncStatus] = useState(null);
 
   const toggleEnabled = async (id, currentEnabled) => {
     try {
@@ -52,6 +56,35 @@ export default function SettingsModal({ onClose }) {
     }
   };
 
+  const handleLanguageChange = (lang) => {
+    setLanguage(lang);
+    setConfig({ language: lang });
+  };
+
+  const handleSyncPush = async () => {
+    setSyncStatus("pushing");
+    try {
+      const gistId = await syncExport();
+      await setConfig({ syncGistId: gistId });
+      setSyncStatus("pushed");
+    } catch (err) {
+      console.error("[Settings] sync push failed:", err);
+      setSyncStatus("error");
+    }
+  };
+
+  const handleSyncPull = async () => {
+    setSyncStatus("pulling");
+    try {
+      await syncImport();
+      await useConfigStore.getState().load();
+      setSyncStatus("pulled");
+    } catch (err) {
+      console.error("[Settings] sync pull failed:", err);
+      setSyncStatus("error");
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -75,8 +108,8 @@ export default function SettingsModal({ onClose }) {
       <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-4 sm:px-6">
           <div>
-            <h2 className="text-xl font-semibold tracking-tight text-white">Settings</h2>
-            <p className="mt-1 text-sm text-slate-500">Tune refresh cadence, alerts, keys and startup behavior.</p>
+            <h2 className="text-xl font-semibold tracking-tight text-white">{t("settings.title")}</h2>
+            <p className="mt-1 text-sm text-slate-500">{t("settings.desc")}</p>
           </div>
           <button
             onClick={onClose}
@@ -90,9 +123,10 @@ export default function SettingsModal({ onClose }) {
         <div className="overflow-auto p-4 sm:p-6">
           <div className="grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
             <div className="space-y-4">
-              <Section icon={TimerReset} title="Refresh">
+              {/* Refresh */}
+              <Section icon={TimerReset} title={t("settings.refresh")}>
                 <label className="block text-sm">
-                  <span className="mb-2 block text-slate-400">Poll interval</span>
+                  <span className="mb-2 block text-slate-400">{t("settings.poll_interval")}</span>
                   <div className="flex items-center gap-2">
                     <input
                       type="number"
@@ -104,18 +138,35 @@ export default function SettingsModal({ onClose }) {
                       }
                       className="small-input"
                     />
-                    <span className="text-xs text-slate-500">seconds, minimum 15</span>
+                    <span className="text-xs text-slate-500">{t("settings.seconds")}</span>
+                  </div>
+                </label>
+                <label className="mt-3 block text-sm">
+                  <span className="mb-2 block text-slate-400">{t("settings.startup_delay")}</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={0}
+                      max={300}
+                      value={config.startupDelaySec}
+                      onChange={(e) =>
+                        setConfig({ startupDelaySec: Math.max(0, Number(e.target.value)) })
+                      }
+                      className="small-input"
+                    />
+                    <span className="text-xs text-slate-500">{t("settings.delay_desc")}</span>
                   </div>
                 </label>
               </Section>
 
-              <Section icon={Bell} title="Alert thresholds">
+              {/* Alert thresholds */}
+              <Section icon={Bell} title={t("settings.alerts")}>
                 <p className="mb-4 text-xs leading-5 text-slate-500">
-                  Warn and danger color cards. Toast sends a Windows notification when remaining usage drops below the threshold.
+                  {t("settings.alerts_desc")}
                 </p>
                 <div className="grid grid-cols-3 gap-2">
                   <label className="text-xs text-slate-400">
-                    Warn
+                    {t("settings.warn")}
                     <input
                       type="number"
                       min={1}
@@ -126,7 +177,7 @@ export default function SettingsModal({ onClose }) {
                     />
                   </label>
                   <label className="text-xs text-slate-400">
-                    Toast
+                    {t("settings.toast")}
                     <input
                       type="number"
                       min={1}
@@ -139,7 +190,7 @@ export default function SettingsModal({ onClose }) {
                     />
                   </label>
                   <label className="text-xs text-slate-400">
-                    Danger
+                    {t("settings.danger")}
                     <input
                       type="number"
                       min={1}
@@ -150,9 +201,36 @@ export default function SettingsModal({ onClose }) {
                     />
                   </label>
                 </div>
+
+                {/* DND */}
+                <div className="mt-4 border-t border-white/10 pt-3">
+                  <p className="mb-2 text-xs text-slate-400">{t("settings.dnd")}</p>
+                  <p className="mb-3 text-[11px] text-slate-600">{t("settings.dnd_desc")}</p>
+                  <div className="flex items-center gap-3">
+                    <label className="text-xs text-slate-400">
+                      {t("settings.dnd_start")}
+                      <input
+                        type="time"
+                        value={config.dndStart ?? ""}
+                        onChange={(e) => setConfig({ dndStart: e.target.value || null })}
+                        className="small-input mt-1 w-24"
+                      />
+                    </label>
+                    <label className="text-xs text-slate-400">
+                      {t("settings.dnd_end")}
+                      <input
+                        type="time"
+                        value={config.dndEnd ?? ""}
+                        onChange={(e) => setConfig({ dndEnd: e.target.value || null })}
+                        className="small-input mt-1 w-24"
+                      />
+                    </label>
+                  </div>
+                </div>
               </Section>
 
-              <Section icon={Power} title="Behavior">
+              {/* Behavior */}
+              <Section icon={Power} title={t("settings.behavior")}>
                 <div className="space-y-3">
                   <label className="flex items-start gap-3 text-sm">
                     <input
@@ -161,7 +239,7 @@ export default function SettingsModal({ onClose }) {
                       onChange={(e) => setConfig({ notifyEnabled: e.target.checked })}
                       className="mt-1 accent-accent"
                     />
-                    <span className="text-slate-300">Show toast notification when usage drops below Toast %</span>
+                    <span className="text-slate-300">{t("settings.toast_notif")}</span>
                   </label>
                   <label className="flex items-start gap-3 text-sm">
                     <input
@@ -170,7 +248,7 @@ export default function SettingsModal({ onClose }) {
                       onChange={(e) => setConfig({ minimizeToTray: e.target.checked })}
                       className="mt-1 accent-accent"
                     />
-                    <span className="text-slate-300">Keep app running in tray when the window closes</span>
+                    <span className="text-slate-300">{t("settings.close_to_tray")}</span>
                   </label>
                   <label className="flex items-start gap-3 text-sm">
                     <input
@@ -179,13 +257,74 @@ export default function SettingsModal({ onClose }) {
                       onChange={() => toggleAutostart(config.autostartEnabled)}
                       className="mt-1 accent-accent"
                     />
-                    <span className="text-slate-300">Launch on Windows startup</span>
+                    <span className="text-slate-300">{t("settings.autostart")}</span>
                   </label>
                 </div>
               </Section>
+
+              {/* Language */}
+              <Section icon={Globe} title={t("settings.language")}>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleLanguageChange("en-US")}
+                    className={`chrome-button ${config.language === "en-US" ? "primary-action" : ""}`}
+                  >
+                    English
+                  </button>
+                  <button
+                    onClick={() => handleLanguageChange("zh-CN")}
+                    className={`chrome-button ${config.language === "zh-CN" ? "primary-action" : ""}`}
+                  >
+                    中文
+                  </button>
+                </div>
+              </Section>
+
+              {/* Cross-device sync */}
+              <Section icon={Cloud} title={t("settings.sync")}>
+                <p className="mb-3 text-[11px] text-slate-600">{t("settings.sync_desc")}</p>
+                <div className="space-y-2">
+                  <input
+                    type="password"
+                    placeholder={t("settings.gist_token")}
+                    value={config.syncGistToken ?? ""}
+                    onChange={(e) => setConfig({ syncGistToken: e.target.value || null })}
+                    className="field-input w-full font-mono text-xs"
+                  />
+                  <input
+                    type="text"
+                    placeholder={t("settings.gist_id")}
+                    value={config.syncGistId ?? ""}
+                    onChange={(e) => setConfig({ syncGistId: e.target.value || null })}
+                    className="field-input w-full font-mono text-xs"
+                  />
+                  <div className="flex gap-2 pt-1">
+                    <button onClick={handleSyncPush} className="chrome-button primary-action" disabled={syncStatus === "pushing"}>
+                      <Cloud size={13} />
+                      {syncStatus === "pushing" ? "..." : t("settings.sync_push")}
+                    </button>
+                    <button onClick={handleSyncPull} className="chrome-button" disabled={syncStatus === "pulling"}>
+                      <RotateCcw size={13} />
+                      {syncStatus === "pulling" ? "..." : t("settings.sync_pull")}
+                    </button>
+                  </div>
+                  {syncStatus === "pushed" && <p className="text-[10px] text-emerald-400">Pushed ✓</p>}
+                  {syncStatus === "pulled" && <p className="text-[10px] text-emerald-400">Pulled ✓</p>}
+                  {syncStatus === "error" && <p className="text-[10px] text-rose-400">Failed — check console</p>}
+                </div>
+              </Section>
+
+              {/* Service mode info */}
+              <Section icon={Server} title={t("settings.service_mode")}>
+                <p className="text-[11px] leading-5 text-slate-500">{t("settings.service_desc")}</p>
+                <code className="mt-2 block rounded-lg border border-white/10 bg-slate-950/50 px-3 py-2 font-mono text-[10px] text-slate-400">
+                  desktop-usage-helper.exe --service
+                </code>
+              </Section>
             </div>
 
-            <Section icon={CheckCircle2} title="Providers">
+            {/* Providers */}
+            <Section icon={CheckCircle2} title={t("settings.providers")}>
               <div className="space-y-3">
                 {providers.map((p) => {
                   const userCfg = config.providers?.[p.id] ?? {};
@@ -193,6 +332,8 @@ export default function SettingsModal({ onClose }) {
                   const envPresent = p.envPresent ?? false;
                   const hasKey = hasUserKey || envPresent;
                   const show = showKeys[p.id];
+                  const accounts = userCfg.accounts ?? [];
+                  const tags = userCfg.tags ?? [];
                   return (
                     <div key={p.id} className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
                       <div className="mb-3 flex items-start justify-between gap-3">
@@ -204,11 +345,11 @@ export default function SettingsModal({ onClose }) {
                             </span>
                             {hasKey ? (
                               <span className="inline-flex items-center gap-1 text-[10px] text-emerald-300">
-                                <CheckCircle2 size={11} /> key set
+                                <CheckCircle2 size={11} /> {t("settings.key_set")}
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1 text-[10px] text-slate-500">
-                                <XCircle size={11} /> no key
+                                <XCircle size={11} /> {t("settings.no_key")}
                               </span>
                             )}
                           </div>
@@ -225,10 +366,11 @@ export default function SettingsModal({ onClose }) {
                             onChange={() => toggleEnabled(p.id, p.enabled)}
                             className="accent-accent"
                           />
-                          enabled
+                          {t("settings.enabled")}
                         </label>
                       </div>
 
+                      {/* API key */}
                       <div className="flex items-center gap-2">
                         <div className="relative flex-1">
                           <input
@@ -258,6 +400,89 @@ export default function SettingsModal({ onClose }) {
                           </button>
                         )}
                       </div>
+
+                      {/* Multi-account */}
+                      {accounts.length > 0 && (
+                        <div className="mt-2 space-y-1.5">
+                          {accounts.map((acc, i) => (
+                            <div key={i} className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                placeholder={`Account ${i + 1} label`}
+                                value={acc.label ?? ""}
+                                onChange={(e) => {
+                                  const next = [...accounts];
+                                  next[i] = { ...acc, label: e.target.value };
+                                  setConfig({ providers: { [p.id]: { ...userCfg, accounts: next } } });
+                                }}
+                                className="field-input flex-1 text-xs"
+                              />
+                              <input
+                                type="password"
+                                placeholder="API key"
+                                value={acc.apiKey ?? ""}
+                                onChange={(e) => {
+                                  const next = [...accounts];
+                                  next[i] = { ...acc, apiKey: e.target.value };
+                                  setConfig({ providers: { [p.id]: { ...userCfg, accounts: next } } });
+                                }}
+                                className="field-input flex-1 font-mono text-xs"
+                              />
+                              <button
+                                onClick={() => {
+                                  const next = accounts.filter((_, j) => j !== i);
+                                  setConfig({ providers: { [p.id]: { ...userCfg, accounts: next } } });
+                                }}
+                                className="chrome-button h-8 w-8 px-0 text-slate-500 hover:text-rose-200"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <button
+                        onClick={() => {
+                          const next = [...accounts, { label: null, apiKey: "", enabled: true }];
+                          setConfig({ providers: { [p.id]: { ...userCfg, accounts: next } } });
+                        }}
+                        className="mt-2 inline-flex items-center gap-1 text-[11px] text-accent hover:text-accent/80"
+                      >
+                        <Plus size={12} />
+                        {t("settings.add_account")}
+                      </button>
+
+                      {/* Cost per unit */}
+                      <div className="mt-3 flex items-center gap-2">
+                        <label className="text-[11px] text-slate-500">{t("settings.cost_per_unit")}</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0.00"
+                          value={userCfg.costPerUnit ?? ""}
+                          onChange={(e) => {
+                            const v = e.target.value ? Number(e.target.value) : null;
+                            setConfig({ providers: { [p.id]: { ...userCfg, costPerUnit: v } } });
+                          }}
+                          className="small-input w-20"
+                        />
+                      </div>
+
+                      {/* Tags */}
+                      <div className="mt-2 flex items-center gap-2">
+                        <Tag size={12} className="text-slate-600" />
+                        <input
+                          type="text"
+                          placeholder={t("settings.tags_desc")}
+                          value={tags.join(", ")}
+                          onChange={(e) => {
+                            const next = e.target.value.split(",").map((s) => s.trim()).filter(Boolean);
+                            setConfig({ providers: { [p.id]: { ...userCfg, tags: next } } });
+                          }}
+                          className="field-input flex-1 text-xs"
+                        />
+                      </div>
                     </div>
                   );
                 })}
@@ -267,9 +492,9 @@ export default function SettingsModal({ onClose }) {
         </div>
 
         <div className="flex items-center justify-between border-t border-white/10 px-5 py-3 text-[11px] text-slate-500 sm:px-6">
-          <span>Config is stored locally with tauri-plugin-store.</span>
+          <span>{t("settings.config_stored")}</span>
           <button onClick={onClose} className="chrome-button primary-action h-8 px-4">
-            Done
+            {t("settings.done")}
           </button>
         </div>
       </div>

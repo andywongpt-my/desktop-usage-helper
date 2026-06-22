@@ -1,5 +1,9 @@
-import { RefreshCw, Settings, Github, Bell, PanelTopClose } from "lucide-react";
+import { RefreshCw, Settings, Github, Bell, PanelTopClose, Sun, Moon, LayoutGrid } from "lucide-react";
 import { useUsageStore } from "../stores/useUsageStore.js";
+import { useI18nStore } from "../stores/useI18nStore.js";
+import { useThemeStore } from "../stores/useThemeStore.js";
+import { useConfigStore } from "../stores/useConfigStore.js";
+import { toggleWidget } from "../lib/tauri.js";
 
 function StatePill({ count, tone, label }) {
   const toneClass = {
@@ -20,6 +24,10 @@ export default function TopBar({ onRefresh, onOpenSettings }) {
   const isLoading = useUsageStore((s) => s.isLoading);
   const providers = useUsageStore((s) => s.providers);
   const statuses = useUsageStore((s) => s.statuses);
+  const t = useI18nStore((s) => s.t);
+  const toggleTheme = useThemeStore((s) => s.toggle);
+  const theme = useThemeStore((s) => s.theme);
+  const setConfig = useConfigStore((s) => s.setConfig);
 
   const enabled = providers.filter((p) => p.enabled);
   const counts = enabled.reduce(
@@ -34,41 +42,64 @@ export default function TopBar({ onRefresh, onOpenSettings }) {
     { ok: 0, warn: 0, danger: 0, unknown: 0 }
   );
 
+  const handleToggleTheme = () => {
+    const next = toggleTheme();
+    setConfig({ theme: next });
+  };
+
+  const handleToggleWidget = () => {
+    toggleWidget().catch((e) => console.error("[TopBar] toggleWidget failed:", e));
+  };
+
   return (
     <header className="topbar">
       <div className="flex min-w-0 items-center gap-3">
         <div className="brand-mark">U</div>
         <div className="min-w-0">
           <h1 className="truncate text-sm font-semibold tracking-tight text-white">
-            Usage Helper
+            {t("app.title")}
           </h1>
           <p className="truncate text-[11px] text-slate-500">
-            Local tray monitor for LLM balances
+            {t("app.subtitle")}
           </p>
         </div>
       </div>
 
       <div className="hidden min-w-0 flex-1 items-center justify-center gap-2 lg:flex">
-        <StatePill count={counts.danger} tone="danger" label="critical" />
-        <StatePill count={counts.warn} tone="warn" label="low" />
-        <StatePill count={counts.ok} tone="ok" label="healthy" />
-        <StatePill count={counts.unknown} tone="neutral" label="unknown" />
+        <StatePill count={counts.danger} tone="danger" label={t("topbar.critical")} />
+        <StatePill count={counts.warn} tone="warn" label={t("topbar.low")} />
+        <StatePill count={counts.ok} tone="ok" label={t("topbar.healthy")} />
+        <StatePill count={counts.unknown} tone="neutral" label={t("topbar.unknown")} />
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
         <button
+          onClick={handleToggleWidget}
+          className="chrome-button"
+          title={t("topbar.widget")}
+        >
+          <LayoutGrid size={15} />
+        </button>
+        <button
+          onClick={handleToggleTheme}
+          className="chrome-button"
+          title={t("topbar.theme")}
+        >
+          {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+        </button>
+        <button
           onClick={onRefresh}
           disabled={isLoading}
           className="chrome-button primary-action"
-          title="Refresh all providers now"
+          title={t("topbar.refresh")}
         >
           <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
-          <span className="hidden sm:inline">Refresh</span>
+          <span className="hidden sm:inline">{t("topbar.refresh")}</span>
         </button>
         <button
           onClick={onOpenSettings}
           className="chrome-button"
-          title="Settings"
+          title={t("topbar.settings")}
         >
           <Settings size={15} />
         </button>
@@ -84,7 +115,7 @@ export default function TopBar({ onRefresh, onOpenSettings }) {
         <div className="hidden h-6 w-px bg-white/10 sm:block" />
         <div className="hidden items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] text-slate-400 xl:flex">
           <Bell size={12} className="text-slate-500" />
-          <span>tray alerts</span>
+          <span>{t("topbar.tray_alerts")}</span>
           <PanelTopClose size={12} className="text-slate-500" />
         </div>
       </div>

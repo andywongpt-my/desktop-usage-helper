@@ -5,14 +5,6 @@
 //   - "Minimize-to-tray" behavior on window close
 //   - Dynamic tray icon (status dot recolored per aggregate state)
 //   - Dynamic tooltip (compact per-provider remaining-pct summary)
-//
-// P-11: Tauri 2.11 menu event signature is `Fn(&AppHandle<R>, MenuEvent)`.
-// P-12: Mutating tray icon or tooltip MUST run on the main thread (tray-icon panics
-//       otherwise). Always use `app.run_on_main_thread` for set_icon / set_tooltip.
-// P-13: CloseRequested `api.prevent_close()` only stops the OS from destroying the
-//       window — we also call `window.hide()` to send it to the taskbar tray.
-// P-14: tauri::image::Image::rgba() returns `&[u8]` of RGBA pixels (top-to-bottom,
-//       row-major). Image::from_bytes() decodes PNG/ICO via Tauri internals.
 
 use crate::models::{AppConfig, ProviderState, ProviderStatus};
 use crate::provider::worst;
@@ -61,9 +53,6 @@ pub mod menu_ids {
 }
 
 /// Build the tray icon with menu and event handlers.
-///
-/// Returns the constructed `TrayIcon` (owned by the AppHandle — also stashed
-/// via `app.manage` for later updates).
 pub fn install<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<TrayIcon<R>>
 where
     AppHandle<R>: Manager<R>,
@@ -88,8 +77,6 @@ where
 
     // Initial icon: neutral gray dot (Unknown) until first refresh lands.
     let icon_bytes: &[u8] = include_bytes!("../icons/32x32.png");
-    // build_icon is infallible in practice (always returns Ok); we unwrap to satisfy
-    // TrayIconBuilder::icon which takes Image (not Result).
     let icon = build_icon(icon_bytes, AggregateState::Unknown)
         .unwrap_or_else(|_| Image::new_owned(vec![0, 0, 0, 0], 1, 1));
 
@@ -158,7 +145,7 @@ where
 }
 
 /// Hide main window if visible, else show it.
-fn toggle_main_window<R: Runtime>(app: &AppHandle<R>)
+pub fn toggle_main_window<R: Runtime>(app: &AppHandle<R>)
 where
     AppHandle<R>: Manager<R>,
 {
@@ -194,7 +181,6 @@ pub fn setup_close_to_tray<R: Runtime>(
 }
 
 /// Update tray icon + tooltip to reflect the worst current state across all providers.
-/// Called by the background poll loop after every refresh.
 pub fn update_from_statuses<R: Runtime>(
     app: &AppHandle<R>,
     statuses: &HashMap<String, ProviderStatus>,
@@ -205,7 +191,6 @@ pub fn update_from_statuses<R: Runtime>(
     let tooltip = build_tooltip(statuses, agg);
     let icon_bytes: &'static [u8] = include_bytes!("../icons/32x32.png");
 
-    // P-12: tray mutation MUST run on the main thread.
     let app_clone = app.clone();
     let _ = app.run_on_main_thread(move || {
         if let Some(tray) = app_clone.tray_by_id("main-tray") {
@@ -227,10 +212,6 @@ fn aggregate_state(statuses: &HashMap<String, ProviderStatus>) -> AggregateState
 }
 
 /// Compose a compact tooltip — top 3 most-critical providers + count.
-///
-/// Format:
-///   Ollama 100% · Codex 60% · MiniMax 12%
-///   — click to open —
 fn build_tooltip(statuses: &HashMap<String, ProviderStatus>, agg: AggregateState) -> String {
     if statuses.is_empty() {
         return match agg {
@@ -239,7 +220,6 @@ fn build_tooltip(statuses: &HashMap<String, ProviderStatus>, agg: AggregateState
         };
     }
 
-    // Sort by remaining% ascending (most critical first)
     let mut rows: Vec<(String, f64, ProviderState)> = statuses
         .iter()
         .filter_map(|(id, s)| {
@@ -278,11 +258,7 @@ fn build_tooltip(statuses: &HashMap<String, ProviderStatus>, agg: AggregateState
 
 // ---- icon rendering ------------------------------------------------------
 
-/// Build a 32×32 RGBA Image with a colored status dot overlaid top-right.
-/// On decode failure, returns the original PNG bytes unchanged so we still
-/// get a valid (un-decorated) icon.
 fn build_icon(png_bytes: &[u8], state: AggregateState) -> tauri::Result<Image<'_>> {
-    // Decode base PNG → owned RGBA pixels.
     let base = Image::from_bytes(png_bytes)?;
     let width = base.width();
     let height = base.height();
@@ -292,7 +268,6 @@ fn build_icon(png_bytes: &[u8], state: AggregateState) -> tauri::Result<Image<'_
         return Ok(Image::new_owned(rgba, width, height));
     }
 
-    // Draw a filled circle at top-right with a dark outline for contrast.
     let dot = dot_color(state);
     let ring: [u8; 4] = [15, 23, 42, 255]; // slate-900
     let radius: i32 = (width.min(height) as i32 / 5).max(5).min(10);
@@ -308,16 +283,13 @@ fn build_icon(png_bytes: &[u8], state: AggregateState) -> tauri::Result<Image<'_
             if d2 <= ring_r * ring_r {
                 let idx = ((y as u32 * width + x as u32) * 4) as usize;
                 let (color, alpha) = if d2 <= radius * radius {
-                    // Inside the dot — solid color
                     (dot, 1.0f32)
                 } else {
-                    // Ring outline — antialiased against background
                     let dist = (d2 as f32).sqrt();
                     let edge = ring_r as f32 - dist;
                     let alpha = edge.clamp(0.0, 1.0);
                     (ring, alpha)
                 };
-                // Alpha-blend over existing pixel
                 let dst = &mut rgba[idx..idx + 4];
                 let a = alpha;
                 dst[0] = ((color[0] as f32) * a + (dst[0] as f32) * (1.0 - a)) as u8;
@@ -334,8 +306,6 @@ fn build_icon(png_bytes: &[u8], state: AggregateState) -> tauri::Result<Image<'_
 // ---- ConfigStore helper for synchronous read in close handler ------------
 
 pub trait ConfigStoreSyncExt {
-    /// Read the current config without awaiting. Falls back to defaults if the
-    /// RwLock is held by a writer.
     fn snapshot_blocking_or_default(&self) -> AppConfig;
 }
 

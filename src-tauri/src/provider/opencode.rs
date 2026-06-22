@@ -73,6 +73,9 @@ impl Provider for OpencodeProvider {
                     error: None,
                     fetched_at: now_ms(),
                     latency_ms,
+                    account_label: None,
+                    tags: vec![],
+                    cost_estimate: None,
                 });
             }
             last_status = Some(code);

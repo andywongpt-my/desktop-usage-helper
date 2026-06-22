@@ -9,8 +9,6 @@ use tauri_plugin_notification::NotificationExt;
 /// Track which providers we've already warned about this session so we don't spam.
 #[derive(Default)]
 pub struct NotifierState {
-    /// `true` once we've fired the toast for this provider at its current critical level.
-    /// Reset when the provider recovers above the toast threshold.
     pub fired: HashMap<String, ()>,
 }
 
@@ -42,6 +40,35 @@ pub fn spawn(app: AppHandle) {
     });
 }
 
+/// Check if current time is within the Do Not Disturb window.
+fn is_in_dnd_window(dnd_start: &Option<String>, dnd_end: &Option<String>) -> bool {
+    let (Some(start), Some(end)) = (dnd_start.as_ref(), dnd_end.as_ref()) else {
+        return false;
+    };
+    let parse_hhmm = |s: &str| -> Option<(u32, u32)> {
+        let parts: Vec<&str> = s.split(':').collect();
+        if parts.len() != 2 { return None; }
+        let h: u32 = parts[0].trim().parse().ok()?;
+        let m: u32 = parts[1].trim().parse().ok()?;
+        if h > 23 || m > 59 { return None; }
+        Some((h, m))
+    };
+    let Some((sh, sm)) = parse_hhmm(start) else { return false };
+    let Some((eh, em)) = parse_hhmm(end) else { return false };
+    let now = chrono::Local::now();
+    let cur_min = now.format("%H").to_string().parse::<u32>().unwrap_or(0) * 60
+        + now.format("%M").to_string().parse::<u32>().unwrap_or(0);
+    let start_min = sh * 60 + sm;
+    let end_min = eh * 60 + em;
+    if start_min <= end_min {
+        // Simple range: 09:00 - 17:00
+        cur_min >= start_min && cur_min < end_min
+    } else {
+        // Overnight range: 23:00 - 08:00
+        cur_min >= start_min || cur_min < end_min
+    }
+}
+
 /// Evaluate a refresh snapshot, fire toasts on threshold crossings, and update the tray.
 async fn evaluate_and_notify(
     app: &AppHandle,
@@ -51,13 +78,20 @@ async fn evaluate_and_notify(
     // Always refresh the tray icon + tooltip (cheap, visible feedback even on OK)
     update_from_statuses(app, &statuses);
 
-    // Read config (notifications enabled, toast threshold)
+    // Read config (notifications enabled, toast threshold, DND)
     let cfg_store = app.state::<crate::config::ConfigStore>();
     let cfg = cfg_store.snapshot().await;
     if !cfg.notify_enabled {
-        // Still mark fired so we don't queue toasts once notifications re-enable
         return;
     }
+
+    // Check DND window
+    let in_dnd = is_in_dnd_window(&cfg.dnd_start, &cfg.dnd_end);
+    if in_dnd {
+        tracing::debug!("notification suppressed — within DND window");
+        return;
+    }
+
     let toast_pct = cfg.toast_threshold_pct;
     let registry = app.state::<ProviderRegistry>();
     let metas = registry.metas(&cfg);
@@ -98,7 +132,6 @@ async fn evaluate_and_notify(
 }
 
 /// True iff the provider's primary metric remaining% < toast_pct.
-/// Unknown / no-data providers never trigger toasts.
 fn is_below_toast_threshold(status: &ProviderStatus, toast_pct: u32) -> bool {
     let Some(p) = &status.primary else {
         return false;

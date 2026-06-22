@@ -36,6 +36,15 @@ pub struct ProviderStatus {
     pub error: Option<String>,
     pub fetched_at: i64,
     pub latency_ms: u64,
+    /// Account label (for multi-account: "Account 1", "Account 2", etc.)
+    #[serde(default)]
+    pub account_label: Option<String>,
+    /// Tags from config (for grouping)
+    #[serde(default)]
+    pub tags: Vec<String>,
+    /// Cost estimate (monthly $ if cost_per_unit is set)
+    #[serde(default)]
+    pub cost_estimate: Option<f64>,
 }
 
 /// Provider metadata — shown in Settings.
@@ -61,6 +70,14 @@ pub struct RefreshResult {
     pub providers: Vec<ProviderMeta>,
 }
 
+/// Multi-account config: one provider can have multiple API keys.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct AccountConfig {
+    pub label: Option<String>,
+    pub api_key: Option<String>,
+    pub enabled: Option<bool>,
+}
+
 /// Persisted application config.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
@@ -76,6 +93,22 @@ pub struct AppConfig {
     /// When the user closes the main window, hide to tray instead of quitting.
     /// Default: true.
     pub minimize_to_tray: bool,
+    /// Delay before first poll after app start (seconds). 0 = immediate.
+    pub startup_delay_sec: u64,
+    /// UI language: "en-US" or "zh-CN"
+    pub language: String,
+    /// UI theme: "dark" or "light"
+    pub theme: String,
+    /// Do Not Disturb start time (HH:MM format, e.g. "23:00"). None = disabled.
+    pub dnd_start: Option<String>,
+    /// Do Not Disturb end time (HH:MM format, e.g. "08:00"). None = disabled.
+    pub dnd_end: Option<String>,
+    /// Global hotkey to toggle window (e.g. "CmdOrCtrl+Shift+D"). Empty = disabled.
+    pub hotkey: String,
+    /// GitHub Gist sync token
+    pub sync_gist_token: Option<String>,
+    /// GitHub Gist ID for sync
+    pub sync_gist_id: Option<String>,
     pub providers: std::collections::HashMap<String, ProviderUserConfig>,
 }
 
@@ -84,6 +117,14 @@ pub struct ProviderUserConfig {
     pub enabled: Option<bool>,
     pub custom_label: Option<String>,
     pub custom_api_key: Option<String>,
+    /// Multi-account: multiple API keys per provider
+    #[serde(default)]
+    pub accounts: Vec<AccountConfig>,
+    /// Cost per unit (optional, for monthly cost estimate)
+    pub cost_per_unit: Option<f64>,
+    /// Tags for grouping in the dashboard
+    #[serde(default)]
+    pub tags: Vec<String>,
 }
 
 impl Default for AppConfig {
@@ -96,6 +137,14 @@ impl Default for AppConfig {
             notify_enabled: true,
             autostart_enabled: false,
             minimize_to_tray: true,
+            startup_delay_sec: 0,
+            language: "en-US".to_string(),
+            theme: "dark".to_string(),
+            dnd_start: None,
+            dnd_end: None,
+            hotkey: "CmdOrCtrl+Shift+D".to_string(),
+            sync_gist_token: None,
+            sync_gist_id: None,
             providers: Default::default(),
         }
     }

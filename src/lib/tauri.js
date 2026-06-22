@@ -13,11 +13,19 @@ const mockConfig = {
   notifyEnabled: true,
   autostartEnabled: false,
   minimizeToTray: true,
+  startupDelaySec: 0,
+  language: "en-US",
+  theme: "dark",
+  dndStart: null,
+  dndEnd: null,
+  hotkey: "CmdOrCtrl+Shift+D",
+  syncGistToken: null,
+  syncGistId: null,
   providers: {
-    ollama: { enabled: true, [keyField]: "" },
-    minimax: { enabled: true, [keyField]: "" },
-    codex: { enabled: true, [keyField]: "" },
-    opencode: { enabled: true, [keyField]: "" },
+    ollama: { enabled: true, [keyField]: "", accounts: [], costPerUnit: null, tags: [] },
+    minimax: { enabled: true, [keyField]: "", accounts: [], costPerUnit: null, tags: [] },
+    codex: { enabled: true, [keyField]: "", accounts: [], costPerUnit: null, tags: [] },
+    opencode: { enabled: true, [keyField]: "", accounts: [], costPerUnit: null, tags: [] },
   },
 };
 
@@ -39,6 +47,9 @@ const mockStatuses = {
     secondary: { label: "Requests", used: 814, limit: 2500, unit: "calls" },
     fetchedAt: now,
     latencyMs: 248,
+    accountLabel: null,
+    tags: ["LLM"],
+    costEstimate: null,
   },
   minimax: {
     id: "minimax",
@@ -48,6 +59,9 @@ const mockStatuses = {
     primary: { label: "Credits remaining", used: 38, limit: 100, unit: "%", resetAt: now + 1000 * 60 * 60 * 8 },
     fetchedAt: now,
     latencyMs: 492,
+    accountLabel: null,
+    tags: [],
+    costEstimate: null,
   },
   codex: {
     id: "codex",
@@ -57,6 +71,9 @@ const mockStatuses = {
     primary: { label: "Session quota", used: 74, limit: 100, unit: "%" },
     fetchedAt: now,
     latencyMs: 19,
+    accountLabel: null,
+    tags: [],
+    costEstimate: null,
   },
   opencode: {
     id: "opencode",
@@ -67,8 +84,18 @@ const mockStatuses = {
     error: "Cloudflare challenge is blocking API probe. Open browser login or provide a session token.",
     fetchedAt: now,
     latencyMs: 1268,
+    accountLabel: null,
+    tags: [],
+    costEstimate: null,
   },
 };
+
+const mockHistory = Array.from({ length: 20 }, (_, i) => ({
+  timestamp: now - (20 - i) * 60 * 60 * 1000,
+  used: 50 + Math.sin(i * 0.5) * 20 + i * 0.5,
+  limit: 100,
+  state: "ok",
+}));
 
 async function call(command, args, fallback) {
   if (!isTauriRuntime()) return fallback;
@@ -113,6 +140,22 @@ export async function setAutostart(enabled) {
 
 export async function getAutostartStatus() {
   return await call("get_autostart_status", undefined, false);
+}
+
+export async function getHistory(id, hours = 24) {
+  return await call("get_history", { id, hours }, mockHistory);
+}
+
+export async function toggleWidget() {
+  return await call("toggle_widget", undefined, null);
+}
+
+export async function syncExport() {
+  return await call("sync_export", undefined, "mock-gist-id");
+}
+
+export async function syncImport() {
+  return await call("sync_import", undefined, mockConfig);
 }
 
 export async function ping() {

@@ -5,7 +5,7 @@ use tokio::sync::RwLock;
 
 /// Thread-safe wrapper around the persisted config store.
 pub struct ConfigStore {
-    inner: Arc<RwLock<AppConfig>>,
+    pub inner: Arc<RwLock<AppConfig>>,
 }
 
 impl ConfigStore {
@@ -105,6 +105,30 @@ fn merge_into(target: &mut AppConfig, partial: serde_json::Value) {
     if let Some(v) = partial.get("minimize_to_tray").and_then(|x| x.as_bool()) {
         target.minimize_to_tray = v;
     }
+    if let Some(v) = partial.get("startup_delay_sec").and_then(|x| x.as_u64()) {
+        target.startup_delay_sec = v;
+    }
+    if let Some(v) = partial.get("language").and_then(|x| x.as_str()) {
+        target.language = v.to_string();
+    }
+    if let Some(v) = partial.get("theme").and_then(|x| x.as_str()) {
+        target.theme = v.to_string();
+    }
+    if let Some(v) = partial.get("dnd_start").and_then(|x| x.as_str()) {
+        target.dnd_start = if v.is_empty() { None } else { Some(v.to_string()) };
+    }
+    if let Some(v) = partial.get("dnd_end").and_then(|x| x.as_str()) {
+        target.dnd_end = if v.is_empty() { None } else { Some(v.to_string()) };
+    }
+    if let Some(v) = partial.get("hotkey").and_then(|x| x.as_str()) {
+        target.hotkey = v.to_string();
+    }
+    if let Some(v) = partial.get("sync_gist_token").and_then(|x| x.as_str()) {
+        target.sync_gist_token = if v.is_empty() { None } else { Some(v.to_string()) };
+    }
+    if let Some(v) = partial.get("sync_gist_id").and_then(|x| x.as_str()) {
+        target.sync_gist_id = if v.is_empty() { None } else { Some(v.to_string()) };
+    }
     if let Some(map) = partial.get("providers").and_then(|x| x.as_object()) {
         for (id, val) in map {
             if val.is_null() {
@@ -123,6 +147,21 @@ fn merge_into(target: &mut AppConfig, partial: serde_json::Value) {
             }
             if let Some(v) = val.get("custom_api_key").and_then(|x| x.as_str()) {
                 entry.custom_api_key = Some(v.to_string());
+            }
+            if let Some(v) = val.get("cost_per_unit").and_then(|x| x.as_f64()) {
+                entry.cost_per_unit = Some(v);
+            }
+            if let Some(arr) = val.get("tags").and_then(|x| x.as_array()) {
+                entry.tags = arr.iter().filter_map(|t| t.as_str().map(|s| s.to_string())).collect();
+            }
+            if let Some(accs) = val.get("accounts").and_then(|x| x.as_array()) {
+                entry.accounts = accs.iter().filter_map(|a| {
+                    Some(crate::models::AccountConfig {
+                        label: a.get("label").and_then(|x| x.as_str()).map(|s| s.to_string()),
+                        api_key: a.get("api_key").and_then(|x| x.as_str()).map(|s| s.to_string()),
+                        enabled: a.get("enabled").and_then(|x| x.as_bool()),
+                    })
+                }).collect();
             }
         }
     }

@@ -2,7 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capabilities required by the desktop usage helper",
-  "windows": ["main"],
+  "windows": ["main", "widget"],
   "permissions": [
     "core:default",
     "core:window:default",
@@ -10,6 +10,10 @@
     "core:window:allow-minimize",
     "core:window:allow-show",
     "core:window:allow-hide",
+    "core:window:allow-create",
+    "core:window:allow-set-focus",
+    "core:window:allow-unminimize",
+    "core:window:allow-set-always-on-top",
     "core:event:default",
     "core:tray:default",
     "core:menu:default",
@@ -22,6 +26,7 @@
     "autostart:default",
     "autostart:allow-enable",
     "autostart:allow-disable",
-    "autostart:allow-is-enabled"
+    "autostart:allow-is-enabled",
+    "global-shortcut:default"
   ]
 }

@@ -21,6 +21,9 @@ npm run tauri:build
 cd src-tauri && cargo check       # fast type-check, no codegen
 cd src-tauri && cargo build       # debug binary
 cd src-tauri && cargo build --release
+
+# Headless service mode (no GUI window, tray + poll + notify only)
+desktop-usage-helper.exe --service
 ```
 
 **Always verify with `cargo check` after editing Rust before launching `npm run tauri:dev`** — saves ~3 minutes vs. waiting for full compile.
@@ -35,6 +38,8 @@ cd src-tauri && cargo build --release
 - Lucide React for all icons (`lucide-react`).
 - All Tauri IPC goes through `src/lib/tauri.js` — never call `invoke()` from components directly.
 - Frontend must remain **browser-developable** — avoid imports that only resolve inside Tauri runtime (e.g. `@tauri-apps/api/window` should be guarded, not imported at module top level).
+- All display strings must go through `useI18nStore.t()` — no hardcoded user-visible text in components.
+- Theme is applied via `useThemeStore` which toggles `html.light` class — all CSS overrides go in `index.css` under `html.light` selectors.
 
 ### Rust (`src-tauri/`)
 
@@ -44,6 +49,9 @@ cd src-tauri && cargo build --release
 - Errors bubble up via `AppError` (in `errors.rs`) which serializes to a string for Tauri commands.
 - Config persistence via `ConfigStore` (`config.rs`) backed by `tauri-plugin-store`. Never read/write the JSON directly from provider code.
 - All env-var lookups go through `Provider::env_var()` + the registry's `metas()` helper — no hard-coded env keys elsewhere.
+- Usage history is file-based (`history.rs` → `history.json` in app data dir). For high-volume data, switch to SQLite.
+- DND (Do Not Disturb) window is checked in `notify.rs` before firing toasts — supports overnight ranges.
+- `ProviderStatus` must include all fields: `account_label`, `tags`, `cost_estimate` (use `None`/`vec![]` if not applicable).
 
 ### Adding or changing providers
 
@@ -65,12 +73,28 @@ Tauri v2 capabilities live in `src-tauri/capabilities/default.json`. Match patte
 }
 ```
 
+### Multi-page build (widget mode)
+
+Vite is configured with `rollupOptions.input` for two entry points: `main` (index.html) and `widget` (widget.html). Both produce separate JS bundles in `dist/`. The widget window is created on-demand by the `toggle_widget` Tauri command.
+
 ## TODO
 
-(Updated 2026-06-22, T-10)
+(Updated 2026-06-22, T-12)
 
 - [x] Tray icon + status menu (T-02) ✅
 - [x] Taste-skill chrome redesign with browser mock fallback (T-10) ✅
+- [x] Usage trend history with sparkline (T-12/F1) ✅
+- [x] Multi-account support (T-12/F2) ✅
+- [x] Cost estimate (T-12/F3) ✅
+- [x] Startup delay (T-12/F4) ✅
+- [x] Global hotkey Ctrl+Shift+D (T-12/F6) ✅
+- [x] Dark/light theme toggle (T-12/F7) ✅
+- [x] DND notification periods (T-12/F8) ✅
+- [x] Provider grouping/folding by tags (T-12/F9) ✅
+- [x] Widget mode — always-on-top mini window (T-12/F11) ✅
+- [x] Cross-device sync via GitHub Gist (T-12/F13) ✅
+- [x] i18n zh-CN + en-US (T-12/F14) ✅
+- [x] Windows Service mode --service flag (T-12/F12) ✅
 - [ ] Provider custom icon override (T-03)
 - [ ] CSV/JSON usage export (T-04)
 - [ ] OpenCode Zen OAuth (deferred — upstream blocker)

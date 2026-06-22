@@ -74,6 +74,9 @@ impl Provider for MinimaxProvider {
             error: None,
             fetched_at: now_ms(),
             latency_ms,
+            account_label: None,
+            tags: vec![],
+            cost_estimate: None,
         })
     }
 }

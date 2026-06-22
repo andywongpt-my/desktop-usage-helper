@@ -1,5 +1,9 @@
-import { useState } from "react";
-import { CheckCircle2, AlertTriangle, XCircle, HelpCircle, Clock, Activity, ChevronDown } from "lucide-react";
+import { useState, useEffect } from "react";
+import { CheckCircle2, AlertTriangle, XCircle, HelpCircle, Clock, Activity, ChevronDown, TrendingUp, DollarSign } from "lucide-react";
+import TrendChart from "./TrendChart.jsx";
+import { useUsageStore } from "../stores/useUsageStore.js";
+import { useI18nStore } from "../stores/useI18nStore.js";
+import { getHistory } from "../lib/tauri.js";
 
 const STATE_STYLES = {
   ok: {
@@ -8,7 +12,7 @@ const STATE_STYLES = {
     fillClass: "progress-fill-ok",
     badge: "text-emerald-200 bg-emerald-300/10 border-emerald-300/20",
     rail: "from-emerald-300/60 to-emerald-300/0",
-    label: "Healthy",
+    label: "card.healthy",
   },
   warn: {
     icon: AlertTriangle,
@@ -16,7 +20,7 @@ const STATE_STYLES = {
     fillClass: "progress-fill-warn",
     badge: "text-amber-200 bg-amber-300/10 border-amber-300/20",
     rail: "from-amber-300/70 to-amber-300/0",
-    label: "Low",
+    label: "card.low",
   },
   danger: {
     icon: XCircle,
@@ -24,7 +28,7 @@ const STATE_STYLES = {
     fillClass: "progress-fill-danger",
     badge: "text-rose-200 bg-rose-300/10 border-rose-300/20",
     rail: "from-rose-300/70 to-rose-300/0",
-    label: "Critical",
+    label: "card.critical",
   },
   unknown: {
     icon: HelpCircle,
@@ -32,7 +36,7 @@ const STATE_STYLES = {
     fillClass: "progress-fill-info",
     badge: "text-slate-300 bg-white/[0.04] border-white/10",
     rail: "from-slate-400/30 to-slate-400/0",
-    label: "Unknown",
+    label: "card.unknown",
   },
 };
 
@@ -95,14 +99,55 @@ function MetricBar({ metric }) {
 
 export default function ProviderCard({ provider }) {
   const [expanded, setExpanded] = useState(false);
+  const [showTrend, setShowTrend] = useState(false);
+  const [trendData, setTrendData] = useState(null);
+  const [trendRange, setTrendRange] = useState(24); // hours
   const status = provider.status;
   const state = status?.state ?? "unknown";
   const style = STATE_STYLES[state];
   const Icon = style.icon;
+  const t = useI18nStore((s) => s.t);
+  const setHistory = useUsageStore((s) => s.setHistory);
+  const historyCache = useUsageStore((s) => s.historyCache);
 
   const hasError = !!status?.error;
   const primaryMetric = status?.primary;
   const secondaryMetric = status?.secondary;
+  const costEstimate = status?.costEstimate;
+
+  const loadTrend = async () => {
+    const cached = historyCache[provider.id];
+    if (cached && Date.now() - cached.fetchedAt < 60_000) {
+      setTrendData(cached.points);
+      return;
+    }
+    try {
+      const points = await getHistory(provider.id, trendRange);
+      setTrendData(points);
+      setHistory(provider.id, points);
+    } catch (e) {
+      console.error("[ProviderCard] getHistory failed:", e);
+    }
+  };
+
+  useEffect(() => {
+    if (showTrend && !trendData) {
+      loadTrend();
+    }
+  }, [showTrend]);
+
+  const handleTrendToggle = () => {
+    if (!showTrend && !trendData) {
+      loadTrend();
+    }
+    setShowTrend(!showTrend);
+  };
+
+  const handleRangeChange = (hours) => {
+    setTrendRange(hours);
+    setTrendData(null);
+    if (showTrend) loadTrend();
+  };
 
   return (
     <article className="provider-card">
@@ -118,11 +163,14 @@ export default function ProviderCard({ provider }) {
             </h3>
             <p className="mt-0.5 truncate text-[11px] text-slate-500">
               {provider.kind}
+              {status?.accountLabel && (
+                <span className="ml-1 text-slate-600">· {status.accountLabel}</span>
+              )}
             </p>
           </div>
         </div>
-        <span className={`rounded-full border px-2.5 py-1 text-[10px] font-medium ${style.badge}`}>
-          {style.label}
+        <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-medium ${style.badge}`}>
+          {t(style.label)}
         </span>
       </div>
 
@@ -134,6 +182,12 @@ export default function ProviderCard({ provider }) {
         <div className="mt-4 space-y-3">
           <MetricBar metric={primaryMetric} />
           {secondaryMetric && <MetricBar metric={secondaryMetric} />}
+          {costEstimate != null && (
+            <div className="flex items-center gap-2 text-[11px] text-slate-400">
+              <DollarSign size={12} className="text-emerald-400" />
+              <span>{t("card.estimate", costEstimate.toFixed(2))}</span>
+            </div>
+          )}
         </div>
       )}
 
@@ -142,14 +196,51 @@ export default function ProviderCard({ provider }) {
           <Activity size={11} />
           <span className="font-mono">{status?.latencyMs != null ? `${status.latencyMs}ms` : "-"}</span>
         </div>
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] text-slate-500 transition-colors hover:bg-white/[0.04] hover:text-slate-200 active:scale-[0.98]"
-        >
-          <ChevronDown size={12} className={expanded ? "rotate-180 transition-transform" : "transition-transform"} />
-          details
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleTrendToggle}
+            className={`inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] transition-colors hover:bg-white/[0.04] hover:text-slate-200 active:scale-[0.98] ${showTrend ? "text-accent" : "text-slate-500"}`}
+          >
+            <TrendingUp size={12} />
+            {t("card.trend")}
+          </button>
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] text-slate-500 transition-colors hover:bg-white/[0.04] hover:text-slate-200 active:scale-[0.98]"
+          >
+            <ChevronDown size={12} className={expanded ? "rotate-180 transition-transform" : "transition-transform"} />
+            {t("card.details")}
+          </button>
+        </div>
       </div>
+
+      {showTrend && (
+        <div className="mt-3 rounded-xl border border-white/10 bg-slate-950/35 p-3">
+          <div className="mb-2 flex items-center gap-2 text-[10px] text-slate-500">
+            {[
+              { h: 1, label: "1h" },
+              { h: 6, label: "6h" },
+              { h: 24, label: "24h" },
+              { h: 168, label: "7d" },
+            ].map(({ h, label }) => (
+              <button
+                key={h}
+                onClick={() => handleRangeChange(h)}
+                className={`rounded px-1.5 py-0.5 ${trendRange === h ? "bg-accent/20 text-accent" : "hover:bg-white/[0.04]"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {trendData ? (
+            <TrendChart points={trendData} />
+          ) : (
+            <div className="flex h-[60px] items-center justify-center text-[10px] text-slate-600">
+              Loading...
+            </div>
+          )}
+        </div>
+      )}
 
       {expanded && status && (
         <pre className="mt-3 max-h-40 overflow-auto rounded-xl border border-white/10 bg-slate-950/70 p-3 font-mono text-[10px] leading-4 text-slate-400">
