@@ -21,3 +21,6 @@ fix_ico.py
 CLAUDE.md
 WIKI.md
 .hermes/
+
+# Release artifacts (uploaded to GitHub Releases, not committed)
+release/
