@@ -1,7 +1,7 @@
 {
   "name": "desktop-usage-helper",
   "private": true,
-  "version": "0.2.1",
+  "version": "0.2.3",
   "type": "module",
   "description": "Windows desktop helper that aggregates LLM vendor usage/balance (Codex, Ollama Cloud, MiniMax, opencode, etc) so you never have to open a browser to check how much you have left.",
   "scripts": {

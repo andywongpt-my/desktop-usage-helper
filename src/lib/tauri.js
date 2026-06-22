@@ -12,6 +12,7 @@ const mockConfig = {
   toastThresholdPct: 20,
   notifyEnabled: true,
   autostartEnabled: false,
+  autoUpdate: true,
   minimizeToTray: true,
   startupDelaySec: 0,
   language: "en-US",

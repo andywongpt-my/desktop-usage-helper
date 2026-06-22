@@ -13,6 +13,8 @@ import {
   onUsageStatuses,
   onTrayRefreshRequested,
   onTrayOpenSettings,
+  checkForUpdates,
+  downloadAndInstallUpdate,
 } from "./lib/tauri.js";
 
 export default function App() {
@@ -44,7 +46,7 @@ export default function App() {
     }
   }, [setStatuses, setProviders]);
 
-  // Initial load: config + providers + first refresh
+  // Initial load: config + providers + first refresh + auto-update check
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -63,6 +65,22 @@ export default function App() {
         setProviders(providers);
       } catch (err) {
         console.error("[App] initial refresh failed:", err);
+      }
+
+      // ── Automatic update check on startup ──
+      // Silently checks for updates. If available, downloads & installs
+      // in background, then relaunches. Errors are non-fatal.
+      if (cfg.autoUpdate !== false) {
+        try {
+          const update = await checkForUpdates();
+          if (update && !cancelled) {
+            console.info(`[App] update available: v${update.version}, auto-installing...`);
+            await downloadAndInstallUpdate();
+            // relaunch is called inside downloadAndInstallUpdate
+          }
+        } catch (err) {
+          console.error("[App] auto-update check failed:", err);
+        }
       }
     })();
     return () => {

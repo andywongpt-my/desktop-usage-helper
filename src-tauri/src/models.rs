@@ -1,5 +1,10 @@
 use serde::{Deserialize, Serialize};
 
+/// Serde default function for bool fields that should default to true.
+fn default_true() -> bool {
+    true
+}
+
 /// One row of usage data shown on a provider card.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Metric {
@@ -72,6 +77,7 @@ pub struct RefreshResult {
 
 /// Multi-account config: one provider can have multiple API keys.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AccountConfig {
     pub label: Option<String>,
     pub api_key: Option<String>,
@@ -79,7 +85,9 @@ pub struct AccountConfig {
 }
 
 /// Persisted application config.
+/// Uses camelCase to match the JS frontend's config keys.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AppConfig {
     pub poll_interval_sec: u64,
     pub warn_threshold_pct: u32,
@@ -90,6 +98,9 @@ pub struct AppConfig {
     pub toast_threshold_pct: u32,
     pub notify_enabled: bool,
     pub autostart_enabled: bool,
+    /// Whether to automatically check & install updates on startup. Default: true.
+    #[serde(default = "default_true")]
+    pub auto_update: bool,
     /// When the user closes the main window, hide to tray instead of quitting.
     /// Default: true.
     pub minimize_to_tray: bool,
@@ -113,6 +124,7 @@ pub struct AppConfig {
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProviderUserConfig {
     pub enabled: Option<bool>,
     pub custom_label: Option<String>,
@@ -140,6 +152,7 @@ impl Default for AppConfig {
             toast_threshold_pct: 20,
             notify_enabled: true,
             autostart_enabled: false,
+            auto_update: true,
             minimize_to_tray: true,
             startup_delay_sec: 0,
             language: "en-US".to_string(),

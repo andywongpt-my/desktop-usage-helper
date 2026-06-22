@@ -84,29 +84,33 @@ impl ConfigStore {
 /// Apply a partial JSON patch to the in-memory config. Only known fields are
 /// touched; unknown keys are silently ignored so the frontend can ship new
 /// fields without breaking older backends.
+/// Keys are camelCase to match the JS frontend and serde rename_all.
 fn merge_into(target: &mut AppConfig, partial: serde_json::Value) {
-    if let Some(v) = partial.get("poll_interval_sec").and_then(|x| x.as_u64()) {
+    if let Some(v) = partial.get("pollIntervalSec").and_then(|x| x.as_u64()) {
         target.poll_interval_sec = v;
     }
-    if let Some(v) = partial.get("warn_threshold_pct").and_then(|x| x.as_u64()) {
+    if let Some(v) = partial.get("warnThresholdPct").and_then(|x| x.as_u64()) {
         target.warn_threshold_pct = v as u32;
     }
-    if let Some(v) = partial.get("danger_threshold_pct").and_then(|x| x.as_u64()) {
+    if let Some(v) = partial.get("dangerThresholdPct").and_then(|x| x.as_u64()) {
         target.danger_threshold_pct = v as u32;
     }
-    if let Some(v) = partial.get("toast_threshold_pct").and_then(|x| x.as_u64()) {
+    if let Some(v) = partial.get("toastThresholdPct").and_then(|x| x.as_u64()) {
         target.toast_threshold_pct = v as u32;
     }
-    if let Some(v) = partial.get("notify_enabled").and_then(|x| x.as_bool()) {
+    if let Some(v) = partial.get("notifyEnabled").and_then(|x| x.as_bool()) {
         target.notify_enabled = v;
     }
-    if let Some(v) = partial.get("autostart_enabled").and_then(|x| x.as_bool()) {
+    if let Some(v) = partial.get("autostartEnabled").and_then(|x| x.as_bool()) {
         target.autostart_enabled = v;
     }
-    if let Some(v) = partial.get("minimize_to_tray").and_then(|x| x.as_bool()) {
+    if let Some(v) = partial.get("autoUpdate").and_then(|x| x.as_bool()) {
+        target.auto_update = v;
+    }
+    if let Some(v) = partial.get("minimizeToTray").and_then(|x| x.as_bool()) {
         target.minimize_to_tray = v;
     }
-    if let Some(v) = partial.get("startup_delay_sec").and_then(|x| x.as_u64()) {
+    if let Some(v) = partial.get("startupDelaySec").and_then(|x| x.as_u64()) {
         target.startup_delay_sec = v;
     }
     if let Some(v) = partial.get("language").and_then(|x| x.as_str()) {
@@ -115,19 +119,19 @@ fn merge_into(target: &mut AppConfig, partial: serde_json::Value) {
     if let Some(v) = partial.get("theme").and_then(|x| x.as_str()) {
         target.theme = v.to_string();
     }
-    if let Some(v) = partial.get("dnd_start").and_then(|x| x.as_str()) {
+    if let Some(v) = partial.get("dndStart").and_then(|x| x.as_str()) {
         target.dnd_start = if v.is_empty() { None } else { Some(v.to_string()) };
     }
-    if let Some(v) = partial.get("dnd_end").and_then(|x| x.as_str()) {
+    if let Some(v) = partial.get("dndEnd").and_then(|x| x.as_str()) {
         target.dnd_end = if v.is_empty() { None } else { Some(v.to_string()) };
     }
     if let Some(v) = partial.get("hotkey").and_then(|x| x.as_str()) {
         target.hotkey = v.to_string();
     }
-    if let Some(v) = partial.get("sync_gist_token").and_then(|x| x.as_str()) {
+    if let Some(v) = partial.get("syncGistToken").and_then(|x| x.as_str()) {
         target.sync_gist_token = if v.is_empty() { None } else { Some(v.to_string()) };
     }
-    if let Some(v) = partial.get("sync_gist_id").and_then(|x| x.as_str()) {
+    if let Some(v) = partial.get("syncGistId").and_then(|x| x.as_str()) {
         target.sync_gist_id = if v.is_empty() { None } else { Some(v.to_string()) };
     }
     if let Some(map) = partial.get("providers").and_then(|x| x.as_object()) {
@@ -143,13 +147,13 @@ fn merge_into(target: &mut AppConfig, partial: serde_json::Value) {
             if let Some(v) = val.get("enabled").and_then(|x| x.as_bool()) {
                 entry.enabled = Some(v);
             }
-            if let Some(v) = val.get("custom_label").and_then(|x| x.as_str()) {
+            if let Some(v) = val.get("customLabel").and_then(|x| x.as_str()) {
                 entry.custom_label = Some(v.to_string());
             }
-            if let Some(v) = val.get("custom_api_key").and_then(|x| x.as_str()) {
+            if let Some(v) = val.get("customApiKey").and_then(|x| x.as_str()) {
                 entry.custom_api_key = Some(v.to_string());
             }
-            if let Some(v) = val.get("cost_per_unit").and_then(|x| x.as_f64()) {
+            if let Some(v) = val.get("costPerUnit").and_then(|x| x.as_f64()) {
                 entry.cost_per_unit = Some(v);
             }
             if let Some(arr) = val.get("tags").and_then(|x| x.as_array()) {
@@ -162,7 +166,7 @@ fn merge_into(target: &mut AppConfig, partial: serde_json::Value) {
                 entry.accounts = accs.iter().filter_map(|a| {
                     Some(crate::models::AccountConfig {
                         label: a.get("label").and_then(|x| x.as_str()).map(|s| s.to_string()),
-                        api_key: a.get("api_key").and_then(|x| x.as_str()).map(|s| s.to_string()),
+                        api_key: a.get("apiKey").and_then(|x| x.as_str()).map(|s| s.to_string()),
                         enabled: a.get("enabled").and_then(|x| x.as_bool()),
                     })
                 }).collect();

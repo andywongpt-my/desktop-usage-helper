@@ -1,0 +1,14 @@
+# Fast compile settings for desktop-usage-helper
+# Uses rust-lld (Rust-built-in) linker + size-optimized release profile
+# Expected: ~3m30s vs 10min+ with default settings
+
+[target.x86_64-pc-windows-msvc]
+linker = "rust-lld"
+rustflags = ["-C", "link-arg=/STACK:8000000"]
+
+[profile.release]
+opt-level = "s"
+lto = false
+codegen-units = 16
+strip = "symbols"
+panic = "abort"

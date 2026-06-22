@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Desktop Usage Helper",
-  "version": "0.2.1",
+  "version": "0.2.3",
   "identifier": "com.andywongpt.desktop-usage-helper",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -48,7 +48,7 @@
   "plugins": {
     "updater": {
       "active": true,
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDk3OEYwNjNCQkMyODhDMEIKUldRTGpDaThPd2FQbDVPVVVVazJtalQwTGt6QUFVamRnbDBES2RpNzdCZnpSQldXcURTSVBJekQK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDI5MkM2MTE0RDdCREFBM0MKUldROHFyM1hGR0VzS1o4RXNncDhUc1hvNkhmZHcwdHFNRFN0QXVLeUNacEF6ZWR0RmVtUVBVMVAK",
       "endpoints": [
         "https://github.com/andywongpt-my/desktop-usage-helper/releases/latest/download/latest.json"
       ],
