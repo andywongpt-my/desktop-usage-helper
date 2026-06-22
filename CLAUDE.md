@@ -67,9 +67,10 @@ Tauri v2 capabilities live in `src-tauri/capabilities/default.json`. Match patte
 
 ## TODO
 
-(Updated 2026-06-22, T-02)
+(Updated 2026-06-22, T-10)
 
 - [x] Tray icon + status menu (T-02) ✅
+- [x] Taste-skill chrome redesign with browser mock fallback (T-10) ✅
 - [ ] Provider custom icon override (T-03)
 - [ ] CSV/JSON usage export (T-04)
 - [ ] OpenCode Zen OAuth (deferred — upstream blocker)

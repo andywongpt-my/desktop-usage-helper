@@ -20,10 +20,8 @@ export default function App() {
   const isLoading = useUsageStore((s) => s.isLoading);
   const configLoaded = useConfigStore((s) => s.loaded);
   const [showSettings, setShowSettings] = useState(false);
-  // Coalesce rapid-fire refresh events from the tray + manual clicks.
   const refreshInFlight = useRef(false);
 
-  /** Trigger an immediate refresh — coalesced so concurrent calls don't double-fetch. */
   const triggerRefresh = useCallback(async () => {
     if (refreshInFlight.current) return;
     refreshInFlight.current = true;
@@ -41,8 +39,6 @@ export default function App() {
     }
   }, [setStatuses, setProviders]);
 
-  // Boot: load config, then refresh once to populate the UI immediately.
-  // The Rust background poll loop will continue to drive updates every poll interval.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -65,13 +61,10 @@ export default function App() {
     };
   }, [setStatuses, setProviders]);
 
-  // Subscribe to Rust-driven refresh results (background poll loop + tray menu).
   useEffect(() => {
     let unlisten;
     (async () => {
       unlisten = await onUsageStatuses((statuses) => {
-        // Update statuses map; do not overwrite the providers list (it changes
-        // only when the user toggles enabled, which has its own refresh path).
         setStatuses(statuses);
       });
     })();
@@ -80,7 +73,6 @@ export default function App() {
     };
   }, [setStatuses]);
 
-  // Tray menu: "Refresh now" — fire an immediate refresh.
   useEffect(() => {
     let unlisten;
     (async () => {
@@ -93,7 +85,6 @@ export default function App() {
     };
   }, [triggerRefresh]);
 
-  // Tray menu: "Open settings" — surface the SettingsModal.
   useEffect(() => {
     let unlisten;
     (async () => {
@@ -108,16 +99,22 @@ export default function App() {
 
   if (!configLoaded) {
     return (
-      <div className="h-screen flex items-center justify-center text-gray-500">
-        Loading configuration…
+      <div className="min-h-[100dvh] app-shell flex items-center justify-center text-slate-400">
+        <div className="loading-card">
+          <div className="loading-mark">U</div>
+          <div>
+            <p className="text-sm font-semibold text-slate-100">Loading configuration</p>
+            <p className="mt-1 text-xs text-slate-500">Reading local store and provider metadata.</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-950 text-gray-200 animate-fade-in">
+    <div className="min-h-[100dvh] app-shell flex flex-col text-slate-200 animate-fade-in">
       <TopBar onRefresh={triggerRefresh} onOpenSettings={() => setShowSettings(true)} />
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto px-4 pb-4 pt-3 sm:px-5">
         <Dashboard onRefresh={triggerRefresh} />
       </main>
       <StatusBar lastRefresh={lastRefresh} loading={isLoading} />

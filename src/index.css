@@ -4,35 +4,164 @@
 
 @layer base {
   html {
-    background-color: #0a0a0c;
+    background-color: #090a0d;
     color-scheme: dark;
   }
   body {
-    @apply bg-gray-950 text-gray-200;
+    @apply bg-gray-950 text-slate-200 antialiased;
   }
-  /* Custom scrollbar — match dark palette */
+  ::selection {
+    background: rgb(94 140 255 / 0.35);
+  }
   ::-webkit-scrollbar { width: 10px; height: 10px; }
-  ::-webkit-scrollbar-track { background: #0a0a0c; }
-  ::-webkit-scrollbar-thumb { background: #2d2d35; border-radius: 5px; }
-  ::-webkit-scrollbar-thumb:hover { background: #3a3a44; }
+  ::-webkit-scrollbar-track { background: #090a0d; }
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #30313a, #202129);
+    border: 2px solid #090a0d;
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: #3a3b46; }
 }
 
 @layer components {
-  .card {
-    @apply bg-gray-900 border border-gray-800 rounded-xl p-5 shadow-lg;
-    @apply transition-all duration-200;
+  .app-shell {
+    background:
+      radial-gradient(circle at 20% -10%, rgb(94 140 255 / 0.18), transparent 28rem),
+      radial-gradient(circle at 90% 10%, rgb(74 222 128 / 0.09), transparent 22rem),
+      linear-gradient(135deg, #090a0d 0%, #0d0e13 45%, #111218 100%);
   }
-  .card-hover:hover {
-    @apply border-gray-700 shadow-xl;
+
+  .topbar {
+    @apply relative flex h-[72px] items-center justify-between gap-4 border-b border-white/10 px-4 sm:px-5;
+    background: linear-gradient(180deg, rgb(20 21 28 / 0.88), rgb(14 15 20 / 0.78));
+    backdrop-filter: blur(22px) saturate(130%);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 16px 36px rgb(0 0 0 / 0.20);
   }
+
+  .brand-mark {
+    @apply grid h-10 w-10 shrink-0 place-items-center rounded-2xl text-sm font-black text-white;
+    background:
+      linear-gradient(135deg, rgb(94 140 255 / 0.95), rgb(58 80 166 / 0.9)),
+      #5e8cff;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.28), 0 16px 34px rgb(94 140 255 / 0.22);
+  }
+
+  .chrome-button {
+    @apply inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-xs font-medium text-slate-300 transition-all duration-150;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05);
+  }
+  .chrome-button:hover {
+    @apply border-white/15 bg-white/[0.07] text-white;
+  }
+  .chrome-button:active {
+    transform: translateY(1px) scale(0.99);
+  }
+  .chrome-button:disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
+  .primary-action {
+    @apply border-accent/25 bg-accent/15 text-white;
+  }
+
+  .hero-panel {
+    @apply grid gap-5 rounded-[28px] border border-white/10 p-5 sm:p-6 lg:grid-cols-[1.6fr_1fr] lg:items-end;
+    background:
+      linear-gradient(135deg, rgb(255 255 255 / 0.07), rgb(255 255 255 / 0.025)),
+      rgb(15 16 22 / 0.78);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 24px 70px rgb(0 0 0 / 0.22);
+  }
+
+  .summary-tile {
+    @apply flex min-h-[78px] items-center gap-3 rounded-2xl border p-3;
+  }
+
+  .sync-chip {
+    @apply inline-flex w-fit items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-3 py-1.5 text-xs text-blue-100;
+  }
+
+  .provider-grid {
+    @apply grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4;
+  }
+
+  .provider-card {
+    @apply relative overflow-hidden rounded-[24px] border border-white/10 p-4 transition-all duration-200;
+    background:
+      linear-gradient(180deg, rgb(255 255 255 / 0.055), rgb(255 255 255 / 0.022)),
+      rgb(16 17 23 / 0.86);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.055), 0 18px 42px rgb(0 0 0 / 0.18);
+  }
+  .provider-card:hover {
+    @apply border-white/15;
+    transform: translateY(-1px);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.07), 0 26px 60px rgb(0 0 0 / 0.24);
+  }
+
+  .provider-icon {
+    @apply grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-white/10 bg-white/[0.04];
+  }
+
+  .metric-block {
+    @apply rounded-2xl border border-white/10 bg-slate-950/35 p-3;
+  }
+
   .progress-track {
-    @apply h-2 bg-gray-800 rounded-full overflow-hidden;
+    @apply h-1.5 overflow-hidden rounded-full bg-black/35;
   }
   .progress-fill {
-    @apply h-full rounded-full transition-all duration-500 ease-out;
+    @apply h-full rounded-full transition-[width] duration-500 ease-out;
   }
-  .progress-fill-ok { @apply bg-gradient-to-r from-emerald-500 to-emerald-400; }
-  .progress-fill-warn { @apply bg-gradient-to-r from-amber-500 to-amber-400; }
-  .progress-fill-danger { @apply bg-gradient-to-r from-rose-500 to-rose-400; }
-  .progress-fill-info { @apply bg-gradient-to-r from-blue-500 to-blue-400; }
+  .progress-fill-ok { @apply bg-gradient-to-r from-emerald-400 to-emerald-300; }
+  .progress-fill-warn { @apply bg-gradient-to-r from-amber-400 to-amber-300; }
+  .progress-fill-danger { @apply bg-gradient-to-r from-rose-400 to-rose-300; }
+  .progress-fill-info { @apply bg-gradient-to-r from-blue-400 to-blue-300; }
+
+  .statusbar {
+    @apply flex h-8 items-center justify-between border-t border-white/10 px-4 text-[11px] text-slate-500 sm:px-5;
+    background: rgb(12 13 18 / 0.76);
+    backdrop-filter: blur(18px) saturate(120%);
+  }
+
+  .empty-panel {
+    @apply w-full rounded-[32px] border border-white/10 p-8 text-center;
+    background:
+      radial-gradient(circle at 50% 0%, rgb(94 140 255 / 0.12), transparent 24rem),
+      linear-gradient(180deg, rgb(255 255 255 / 0.06), rgb(255 255 255 / 0.02)),
+      rgb(15 16 22 / 0.82);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 24px 70px rgb(0 0 0 / 0.24);
+  }
+  .empty-icon {
+    @apply mx-auto grid h-16 w-16 place-items-center rounded-3xl border border-white/10 bg-white/[0.04] text-slate-300;
+  }
+  .env-pill {
+    @apply rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 font-mono text-[11px] text-slate-400;
+  }
+
+  .loading-card {
+    @apply flex items-center gap-4 rounded-[28px] border border-white/10 bg-white/[0.05] p-5 shadow-2xl;
+  }
+  .loading-mark {
+    @apply grid h-12 w-12 place-items-center rounded-2xl bg-accent text-base font-black text-white;
+  }
+
+  .modal-backdrop {
+    @apply fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in;
+    background: rgb(0 0 0 / 0.72);
+    backdrop-filter: blur(18px);
+  }
+  .modal-panel {
+    @apply flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-[28px] border border-white/10;
+    background:
+      linear-gradient(180deg, rgb(255 255 255 / 0.07), rgb(255 255 255 / 0.025)),
+      rgb(15 16 22 / 0.96);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 28px 90px rgb(0 0 0 / 0.45);
+  }
+  .section-card {
+    @apply rounded-3xl border border-white/10 bg-white/[0.035] p-4;
+  }
+  .field-input {
+    @apply rounded-xl border border-white/10 bg-slate-950/50 px-3 py-2 text-sm text-slate-100 outline-none transition-colors placeholder:text-slate-600 focus:border-accent/60;
+  }
+  .small-input {
+    @apply w-20 rounded-xl border border-white/10 bg-slate-950/50 px-3 py-2 text-sm font-mono text-slate-100 outline-none transition-colors focus:border-accent/60;
+  }
 }

@@ -1,39 +1,43 @@
 import { useState } from "react";
-import { CheckCircle2, AlertTriangle, XCircle, HelpCircle, Clock, Activity } from "lucide-react";
+import { CheckCircle2, AlertTriangle, XCircle, HelpCircle, Clock, Activity, ChevronDown } from "lucide-react";
 
 const STATE_STYLES = {
   ok: {
     icon: CheckCircle2,
-    iconColor: "text-ok",
+    iconColor: "text-emerald-300",
     fillClass: "progress-fill-ok",
-    badge: "text-emerald-400 bg-emerald-400/10 border-emerald-400/20",
+    badge: "text-emerald-200 bg-emerald-300/10 border-emerald-300/20",
+    rail: "from-emerald-300/60 to-emerald-300/0",
     label: "Healthy",
   },
   warn: {
     icon: AlertTriangle,
-    iconColor: "text-warn",
+    iconColor: "text-amber-300",
     fillClass: "progress-fill-warn",
-    badge: "text-amber-400 bg-amber-400/10 border-amber-400/20",
+    badge: "text-amber-200 bg-amber-300/10 border-amber-300/20",
+    rail: "from-amber-300/70 to-amber-300/0",
     label: "Low",
   },
   danger: {
     icon: XCircle,
-    iconColor: "text-danger",
+    iconColor: "text-rose-300",
     fillClass: "progress-fill-danger",
-    badge: "text-rose-400 bg-rose-400/10 border-rose-400/20",
+    badge: "text-rose-200 bg-rose-300/10 border-rose-300/20",
+    rail: "from-rose-300/70 to-rose-300/0",
     label: "Critical",
   },
   unknown: {
     icon: HelpCircle,
-    iconColor: "text-gray-500",
+    iconColor: "text-slate-500",
     fillClass: "progress-fill-info",
-    badge: "text-gray-400 bg-gray-400/10 border-gray-400/20",
+    badge: "text-slate-300 bg-white/[0.04] border-white/10",
+    rail: "from-slate-400/30 to-slate-400/0",
     label: "Unknown",
   },
 };
 
 function formatNumber(n) {
-  if (n == null) return "—";
+  if (n == null) return "-";
   if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (Math.abs(n) >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
   return String(Math.round(n * 100) / 100);
@@ -47,7 +51,7 @@ function pct(used, limit) {
 function timeUntilReset(resetAt) {
   if (!resetAt) return null;
   const ms = resetAt - Date.now();
-  if (ms <= 0) return "resetting…";
+  if (ms <= 0) return "resetting";
   const min = Math.floor(ms / 60_000);
   if (min < 60) return `${min}m`;
   const h = Math.floor(min / 60);
@@ -63,26 +67,28 @@ function MetricBar({ metric }) {
     p < 30 ? "progress-fill-danger" :
     p < 60 ? "progress-fill-warn" : "progress-fill-ok";
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-baseline justify-between text-xs">
-        <span className="text-gray-400">{metric.label}</span>
-        <span className="font-mono text-gray-200">
+    <div className="metric-block">
+      <div className="flex items-start justify-between gap-3 text-xs">
+        <div>
+          <p className="text-slate-300">{metric.label}</p>
+          {metric.resetAt && (
+            <p className="mt-1 flex items-center gap-1 text-[10px] text-slate-500">
+              <Clock size={10} />
+              <span>resets in {timeUntilReset(metric.resetAt)}</span>
+            </p>
+          )}
+        </div>
+        <span className="shrink-0 font-mono text-slate-100">
           {formatNumber(metric.used)} / {formatNumber(metric.limit)}
-          {metric.unit ? <span className="text-gray-500 ml-1">{metric.unit}</span> : null}
+          {metric.unit ? <span className="ml-1 text-slate-500">{metric.unit}</span> : null}
         </span>
       </div>
-      <div className="progress-track">
+      <div className="progress-track mt-2">
         <div
           className={`progress-fill ${fillClass}`}
           style={{ width: `${p ?? 100}%` }}
         />
       </div>
-      {metric.resetAt && (
-        <div className="flex items-center gap-1 text-[10px] text-gray-500 font-mono">
-          <Clock size={10} />
-          <span>resets in {timeUntilReset(metric.resetAt)}</span>
-        </div>
-      )}
     </div>
   );
 }
@@ -99,53 +105,57 @@ export default function ProviderCard({ provider }) {
   const secondaryMetric = status?.secondary;
 
   return (
-    <div className="card card-hover">
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <Icon size={16} className={style.iconColor} />
+    <article className="provider-card">
+      <div className={`absolute inset-x-0 top-0 h-px bg-gradient-to-r ${style.rail}`} />
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="provider-icon">
+            <Icon size={17} className={style.iconColor} />
+          </div>
           <div className="min-w-0">
-            <h3 className="text-sm font-medium text-gray-100 truncate">
+            <h3 className="truncate text-sm font-semibold text-white">
               {provider.label}
             </h3>
-            <p className="text-[10px] text-gray-500 uppercase tracking-wider">
+            <p className="mt-0.5 truncate text-[11px] text-slate-500">
               {provider.kind}
             </p>
           </div>
         </div>
-        <span className={`px-2 py-0.5 rounded-full border text-[10px] font-medium ${style.badge}`}>
+        <span className={`rounded-full border px-2.5 py-1 text-[10px] font-medium ${style.badge}`}>
           {style.label}
         </span>
       </div>
 
       {hasError ? (
-        <div className="text-xs text-danger bg-rose-500/10 border border-rose-500/20 rounded-md p-2 mb-2 break-words">
+        <div className="mt-4 rounded-xl border border-rose-300/15 bg-rose-300/10 p-3 text-xs leading-5 text-rose-100 break-words">
           {status.error}
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="mt-4 space-y-3">
           <MetricBar metric={primaryMetric} />
           {secondaryMetric && <MetricBar metric={secondaryMetric} />}
         </div>
       )}
 
-      <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-800">
-        <div className="flex items-center gap-1 text-[10px] text-gray-500 font-mono">
-          <Activity size={10} />
-          <span>{status?.latencyMs != null ? `${status.latencyMs}ms` : "—"}</span>
+      <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-3">
+        <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
+          <Activity size={11} />
+          <span className="font-mono">{status?.latencyMs != null ? `${status.latencyMs}ms` : "-"}</span>
         </div>
         <button
           onClick={() => setExpanded(!expanded)}
-          className="text-[10px] text-gray-500 hover:text-gray-300 font-mono"
+          className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] text-slate-500 transition-colors hover:bg-white/[0.04] hover:text-slate-200 active:scale-[0.98]"
         >
-          {expanded ? "−" : "+"} details
+          <ChevronDown size={12} className={expanded ? "rotate-180 transition-transform" : "transition-transform"} />
+          details
         </button>
       </div>
 
       {expanded && status && (
-        <pre className="mt-3 text-[10px] text-gray-500 bg-gray-950 rounded p-2 overflow-auto max-h-40 font-mono">
+        <pre className="mt-3 max-h-40 overflow-auto rounded-xl border border-white/10 bg-slate-950/70 p-3 font-mono text-[10px] leading-4 text-slate-400">
           {JSON.stringify(status, null, 2)}
         </pre>
       )}
-    </div>
+    </article>
   );
 }

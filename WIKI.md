@@ -54,6 +54,24 @@ Modified files:
 - `src/stores/useUsageStore.js` — `setSnapshot()` for atomic refresh
 - `src/stores/useConfigStore.js` — added `toastThresholdPct: 20`, `minimizeToTray: true` defaults
 
+### T-10 — taste-skill chrome redesign ✅ 2026-06-22
+
+- Redesign mode: **chrome-only product UI**. Rust polling, provider registry, tray notifier, IPC commands, and data flow were left untouched.
+- Visual direction: dark utility console with rounded glass chrome, one locked accent (`accent/#5e8cff`), semantic state colors only for provider health.
+- Changed surfaces:
+  - `src/components/TopBar.jsx` — compact brand rail, semantic status pills, tighter action group.
+  - `src/components/Dashboard.jsx` — hero summary panel + responsive state tiles + card grid.
+  - `src/components/ProviderCard.jsx` — refined provider cards, metric blocks, semantic top rail, better details affordance.
+  - `src/components/SettingsModal.jsx` — two-column desktop layout, carded sections, stronger input/focus contrast.
+  - `src/components/EmptyState.jsx`, `StatusBar.jsx`, `App.jsx`, `src/index.css` — unified chrome tokens and loading state.
+  - `src/lib/tauri.js` — added browser-only mock fallbacks so `npm run dev` can visually verify UI outside the Tauri runtime.
+- Verification:
+  - `npm run build` ✅ Vite build passes.
+  - Browser visual pass at `http://127.0.0.1:1420` ✅ dashboard and Settings modal render with mock data.
+
+Pitfall added:
+- **P-16: Browser dev needs Tauri command fallbacks** — direct `invoke()`/`listen()` calls throw outside Tauri, leaving the app stuck on the loading shell. Keep `src/lib/tauri.js` runtime-gated with safe mock responses so frontend chrome can be inspected in Vite before launching the native window.
+
 ## Vendor API matrix
 
 | Provider | Endpoint | Auth | Status | Notes |
@@ -223,6 +241,10 @@ while the user is working in another app. Drive the poll loop from the Rust
 backend via `tauri::async_runtime::spawn` and emit a `usage:*` event. The
 frontend becomes a pure subscriber (mirrors state into the Zustand store).
 This also enables CORS-free access to OAuth file reads (`~/.codex/auth.json`).
+
+### P-16: Browser dev needs Tauri command fallbacks
+
+`npm run dev` runs in a normal browser. Direct `invoke()` / `listen()` calls from `@tauri-apps/api` throw outside the Tauri runtime and can leave React stuck on the loading shell. Keep all runtime checks inside `src/lib/tauri.js` and return safe mock config/providers/statuses when `window.__TAURI_INTERNALS__` is absent. This keeps chrome redesign work browser-first without changing Rust commands.
 
 ## Build commands
 
