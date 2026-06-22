@@ -16,3 +16,7 @@ fix_ico.py
 .cargo_build.bat
 .start_dev.bat
 *.tmp_probe*
+
+# Internal docs — keep local only, do not push to GitHub
+CLAUDE.md
+WIKI.md

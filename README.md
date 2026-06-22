@@ -133,4 +133,4 @@ MIT — see `LICENSE`.
 
 ## Credits
 
-Built by **andywongpt** as a personal productivity tool. The dark creative-editor palette mirrors the Pipeline Photo project aesthetic.
+Built by **andywongpt** as a personal productivity tool.
