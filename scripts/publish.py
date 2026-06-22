@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-"""Publish GitHub Release v0.2.4 — creates release + uploads assets."""
+"""Publish GitHub Release v0.2.5 — creates release + uploads assets."""
 import subprocess, json, sys, os, urllib.parse, urllib.request
 
 REPO = "andywongpt-my/desktop-usage-helper"
-VERSION = "0.2.4"
-BUNDLE = r"C:\Users\andyw\desktop-usage-helper\src-tauri\target\release\bundle\nsis"
+VERSION = "0.2.5"
+BUNDLE = r"C:\Users\andyw\projects\desktop-usage-helper\src-tauri\target\release\bundle\nsis"
 
 # Get token from git credential store
 cred_input = b"protocol=https\nhost=github.com\n\n"
@@ -26,14 +26,21 @@ print(f"Token length: {len(token)}")
 print(f"=== Creating release v{VERSION} ===")
 body_data = json.dumps({
     "tag_name": f"v{VERSION}",
-    "name": f"v{VERSION} — MiniMax/Ollama HTTP 411 + Enable UI fix",
-    "body": """Desktop Usage Helper v0.2.4
+    "name": f"v{VERSION} — Audit bug fixes (6/6)",
+    "body": """Desktop Usage Helper v0.2.5
 
-## Fixes
+## Fixes (full audit — 6 bugs resolved)
 
-- **MiniMax/Ollama HTTP 411**: Adds explicit empty POST body so `Content-Length: 0` is sent to `https://ollama.com/api/me`.
-- **Enable checkbox stale UI**: Settings now syncs provider metadata immediately after toggling Enable.
-- **Displayed app version**: Status bar now reads from `package.json` instead of hardcoding v0.2.0.
+- **StatusBar `t` variable shadowing**: Effect-internal timer `t` renamed to `timer` to avoid collision with i18n `t()`.
+- **sync.rs PATCH for new Gist**: GitHub Gist API requires POST for create, PATCH for update. Now uses `reqwest::Method::POST`/`PATCH` correctly.
+- **ProviderCard stale state**: `loadTrend` wrapped in `useCallback` with explicit `hours` param; `useEffect` deps fixed; `handleRangeChange` no longer reads stale `trendRange`.
+- **Dashboard focus double-refresh**: 30s debounce via `useRef` — window focus no longer triggers redundant refresh overlapping with Rust poll loop.
+- **CSP `connect-src https://*` narrowed**: Restricted to known vendor domains only (api.anthropic.com, api.openai.com, api.github.com, chatgpt.com, ollama.com, opencode.ai, api.z.ai, open.bigmodel.cn, api.minimax.io).
+- **EmptyState hardcoded English**: Wired to `useI18nStore.t()` — now renders in zh-CN or en-US per language setting.
+
+## Verification
+- `vite build` ✅ (1615 modules)
+- `cargo check` ✅ (0 errors, 14 pre-existing warnings)
 
 """,
     "prerelease": False
