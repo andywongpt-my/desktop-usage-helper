@@ -31,18 +31,26 @@ impl Provider for ZaiProvider {
             AppError::MissingKey(self.id().to_string(), self.env_var().unwrap_or("?").to_string())
         })?;
 
-        // Try known paths
-        let attempts: Vec<&str> = vec![
-            "https://api.z.ai/api/v1/usage",
-            "https://api.z.ai/v1/usage",
-            "https://open.bigmodel.cn/api/v1/usage",
-            "https://open.bigmodel.cn/api/paas/v1/usage",
-        ];
+        // Try known paths, or custom endpoint if provided
+        let base = ctx.custom_endpoint.unwrap_or("https://api.z.ai");
+        let attempts: Vec<String> = if ctx.custom_endpoint.is_some() {
+            vec![
+                format!("{}/api/v1/usage", base),
+                format!("{}/v1/usage", base),
+            ]
+        } else {
+            vec![
+                "https://api.z.ai/api/v1/usage".into(),
+                "https://api.z.ai/v1/usage".into(),
+                "https://open.bigmodel.cn/api/v1/usage".into(),
+                "https://open.bigmodel.cn/api/paas/v1/usage".into(),
+            ]
+        };
 
-        for url in attempts {
+        for url in &attempts {
             let resp = ctx
                 .http
-                .get(url)
+                .get(url.as_str())
                 .bearer_auth(api_key)
                 .header("Accept", "application/json")
                 .send()

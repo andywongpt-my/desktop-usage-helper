@@ -79,6 +79,23 @@ impl ConfigStore {
         persist(store, &guard).map_err(AppError::Config)?;
         Ok(guard.clone())
     }
+
+    /// Set custom endpoint URL for a single provider. Empty string clears it.
+    pub async fn set_provider_endpoint(
+        &self,
+        store: &std::sync::Arc<tauri_plugin_store::Store<tauri::Wry>>,
+        id: &str,
+        endpoint: &str,
+    ) -> AppResult<AppConfig> {
+        let mut guard = self.inner.write().await;
+        let entry = guard
+            .providers
+            .entry(id.to_string())
+            .or_insert_with(crate::models::ProviderUserConfig::default);
+        entry.custom_endpoint = if endpoint.is_empty() { None } else { Some(endpoint.to_string()) };
+        persist(store, &guard).map_err(AppError::Config)?;
+        Ok(guard.clone())
+    }
 }
 
 /// Apply a partial JSON patch to the in-memory config. Only known fields are
@@ -152,6 +169,9 @@ fn merge_into(target: &mut AppConfig, partial: serde_json::Value) {
             }
             if let Some(v) = val.get("customApiKey").and_then(|x| x.as_str()) {
                 entry.custom_api_key = Some(v.to_string());
+            }
+            if let Some(v) = val.get("customEndpoint").and_then(|x| x.as_str()) {
+                entry.custom_endpoint = if v.is_empty() { None } else { Some(v.to_string()) };
             }
             if let Some(v) = val.get("costPerUnit").and_then(|x| x.as_f64()) {
                 entry.cost_per_unit = Some(v);

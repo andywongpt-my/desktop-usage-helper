@@ -32,13 +32,18 @@ impl Provider for MinimaxProvider {
             )
         })?;
 
-        // Hit the same Ollama endpoint. Keep the explicit empty body so
-        // reqwest sends Content-Length: 0; otherwise Ollama returns HTTP 411.
+        // Use custom endpoint if provided, otherwise the default Ollama endpoint.
+        let url = ctx.custom_endpoint.unwrap_or("https://ollama.com/api/me");
+
+        // Hit the same Ollama endpoint. Keep the explicit empty body AND
+        // Content-Length: 0 header so reqwest sends the header; otherwise
+        // Ollama's Google frontend returns HTTP 411.
         let resp = ctx
             .http
-            .post("https://ollama.com/api/me")
+            .post(url)
             .bearer_auth(key)
             .header("Accept", "application/json")
+            .header("Content-Length", "0")
             .body("")
             .send()
             .await?;

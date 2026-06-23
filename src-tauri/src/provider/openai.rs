@@ -44,7 +44,8 @@ impl Provider for OpenaiProvider {
         let end_ts = now.timestamp();
 
         let url = format!(
-            "https://api.openai.com/v1/usage?start_time={}&end_time={}&limit=100",
+            "{}/v1/usage?start_time={}&end_time={}&limit=100",
+            ctx.custom_endpoint.unwrap_or("https://api.openai.com"),
             start_ts, end_ts
         );
 

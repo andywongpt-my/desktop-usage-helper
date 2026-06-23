@@ -51,15 +51,20 @@ impl Provider for OllamaProvider {
             AppError::MissingKey(self.id().to_string(), self.env_var().unwrap_or("?").to_string())
         })?;
 
+        // Use custom endpoint if provided, otherwise the default Ollama URL.
+        let url = ctx.custom_endpoint.unwrap_or(OLLAMA_ME_URL);
+
         // POST /api/me — GET returns 405 on Ollama's router.
         // Ollama's Google frontend also rejects an empty POST if the request
         // omits Content-Length (HTTP 411). reqwest does not emit that header
-        // for a body-less POST, so attach an explicit empty body.
+        // for a body-less POST, so attach an explicit empty body AND the
+        // Content-Length: 0 header to be safe.
         let resp = ctx
             .http
-            .post(OLLAMA_ME_URL)
+            .post(url)
             .bearer_auth(api_key)
             .header("Accept", "application/json")
+            .header("Content-Length", "0")
             .body("")
             .send()
             .await?;

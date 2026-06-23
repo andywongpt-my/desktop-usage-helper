@@ -50,6 +50,9 @@ pub struct ProviderContext<'a> {
     pub warn_pct: u32,
     pub danger_pct: u32,
     pub custom_label: Option<&'a str>,
+    /// Custom endpoint URL override (from user config). When set, providers
+    /// should use this URL instead of their hardcoded default.
+    pub custom_endpoint: Option<&'a str>,
 }
 
 pub mod ollama;

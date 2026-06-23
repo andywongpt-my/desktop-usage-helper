@@ -120,6 +120,7 @@ pub fn run_with_options(opts: RunOptions) {
             commands::update_config,
             commands::set_provider_enabled,
             commands::set_provider_api_key,
+            commands::set_provider_endpoint,
             commands::set_autostart,
             commands::get_autostart_status,
             commands::check_env_keys,

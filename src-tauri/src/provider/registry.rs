@@ -86,6 +86,7 @@ pub async fn refresh_all(
         // Some providers (Codex) read their own state from disk and ignore api_key.
         let api_key_owned = api_key.map(|s| s.to_string());
         let custom_label = user_cfg.custom_label.clone();
+        let custom_endpoint = user_cfg.custom_endpoint.clone();
 
         let provider = provider.clone();
         let http = registry.http().clone();
@@ -101,6 +102,7 @@ pub async fn refresh_all(
                 warn_pct: warn,
                 danger_pct: danger,
                 custom_label: custom_label.as_deref(),
+                custom_endpoint: custom_endpoint.as_deref(),
             };
             let started = Instant::now();
             let result = provider.fetch(&ctx).await;
@@ -161,6 +163,7 @@ pub async fn refresh_one(app: &AppHandle, id: &str) -> AppResult<ProviderStatus>
 
     let api_key_owned = api_key.map(|s| s.to_string());
     let custom_label = user_cfg.custom_label.clone();
+    let custom_endpoint = user_cfg.custom_endpoint.clone();
 
     let ctx = ProviderContext {
         http: registry.http(),
@@ -168,6 +171,7 @@ pub async fn refresh_one(app: &AppHandle, id: &str) -> AppResult<ProviderStatus>
         warn_pct: cfg.warn_threshold_pct,
         danger_pct: cfg.danger_threshold_pct,
         custom_label: custom_label.as_deref(),
+        custom_endpoint: custom_endpoint.as_deref(),
     };
     let started = Instant::now();
     let mut status = provider.fetch(&ctx).await?;

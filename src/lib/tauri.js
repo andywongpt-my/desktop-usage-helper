@@ -136,6 +136,10 @@ export async function setApiKey(id, apiKey) {
   return await call("set_provider_api_key", { id, apiKey }, { ...mockConfig, providers: { ...mockConfig.providers, [id]: { ...(mockConfig.providers[id] ?? {}), [keyField]: apiKey } } });
 }
 
+export async function setProviderEndpoint(id, endpoint) {
+  return await call("set_provider_endpoint", { id, endpoint }, { ...mockConfig, providers: { ...mockConfig.providers, [id]: { ...(mockConfig.providers[id] ?? {}), customEndpoint: endpoint } } });
+}
+
 export async function checkEnvKeys() {
   return await call("check_env_keys", undefined, mockProviders.map((p) => ({ id: p.id, envVar: p.envVar, present: p.envPresent })));
 }

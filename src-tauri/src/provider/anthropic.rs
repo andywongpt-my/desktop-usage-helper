@@ -33,15 +33,16 @@ impl Provider for AnthropicProvider {
         })?;
 
         // Try known paths. Anthropic may add a usage endpoint in the future.
-        let attempts: Vec<(&str, &str)> = vec![
-            ("GET", "https://api.anthropic.com/v1/organizations/usage"),
-            ("GET", "https://api.anthropic.com/v1/usage"),
+        let base = ctx.custom_endpoint.unwrap_or("https://api.anthropic.com");
+        let attempts: Vec<(&str, String)> = vec![
+            ("GET", format!("{}/v1/organizations/usage", base)),
+            ("GET", format!("{}/v1/usage", base)),
         ];
 
         for (method, url) in attempts {
             let req = match method {
-                "GET" => ctx.http.get(url),
-                _ => ctx.http.get(url),
+                "GET" => ctx.http.get(&url),
+                _ => ctx.http.get(&url),
             };
             let resp = req
                 .header("x-api-key", api_key)

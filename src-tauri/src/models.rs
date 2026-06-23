@@ -129,6 +129,8 @@ pub struct ProviderUserConfig {
     pub enabled: Option<bool>,
     pub custom_label: Option<String>,
     pub custom_api_key: Option<String>,
+    /// Custom API endpoint URL (overrides the provider's hardcoded URL)
+    pub custom_endpoint: Option<String>,
     /// Multi-account: multiple API keys per provider
     #[serde(default)]
     pub accounts: Vec<AccountConfig>,

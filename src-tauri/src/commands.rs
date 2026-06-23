@@ -122,6 +122,19 @@ pub async fn set_provider_api_key(
 }
 
 #[tauri::command]
+pub async fn set_provider_endpoint(
+    app: AppHandle,
+    id: String,
+    endpoint: String,
+) -> AppResult<AppConfig> {
+    let cfg_store = app.state::<crate::config::ConfigStore>();
+    let store = app
+        .store("config.json")
+        .map_err(|e| crate::errors::AppError::Config(e.to_string()))?;
+    cfg_store.set_provider_endpoint(&store, &id, &endpoint).await
+}
+
+#[tauri::command]
 pub async fn set_autostart(app: AppHandle, enabled: bool) -> AppResult<AppConfig> {
     let manager = app.autolaunch();
     if enabled {

@@ -3,7 +3,7 @@ import { X, Eye, EyeOff, RotateCcw, CheckCircle2, XCircle, Bell, Power, TimerRes
 import { useConfigStore } from "../stores/useConfigStore.js";
 import { useUsageStore } from "../stores/useUsageStore.js";
 import { useI18nStore } from "../stores/useI18nStore.js";
-import { setApiKey, setProviderEnabled, setAutostart, getAutostartStatus, syncExport, syncImport, checkForUpdates, downloadAndInstallUpdate } from "../lib/tauri.js";
+import { setApiKey, setProviderEndpoint, setProviderEnabled, setAutostart, getAutostartStatus, syncExport, syncImport, checkForUpdates, downloadAndInstallUpdate } from "../lib/tauri.js";
 
 function Section({ icon: Icon, title, children }) {
   return (
@@ -60,6 +60,15 @@ export default function SettingsModal({ onClose }) {
       await refreshEnv();
     } catch (err) {
       console.error("[Settings] setApiKey failed:", err);
+    }
+  };
+
+  const setEndpoint = async (id, value) => {
+    try {
+      const updated = await setProviderEndpoint(id, value);
+      useConfigStore.setState({ config: updated });
+    } catch (err) {
+      console.error("[Settings] setProviderEndpoint failed:", err);
     }
   };
 
@@ -505,6 +514,19 @@ export default function SettingsModal({ onClose }) {
                             <RotateCcw size={13} />
                           </button>
                         )}
+                      </div>
+
+                      {/* Custom endpoint */}
+                      <div className="mt-2 flex items-center gap-2">
+                        <Server size={12} className="shrink-0 text-slate-600" />
+                        <input
+                          type="text"
+                          aria-label={`${p.label} custom endpoint`}
+                          placeholder="custom endpoint URL (optional)"
+                          value={userCfg.customEndpoint ?? ""}
+                          onChange={(e) => setEndpoint(p.id, e.target.value)}
+                          className="field-input w-full font-mono text-xs"
+                        />
                       </div>
 
                       {/* Multi-account */}
