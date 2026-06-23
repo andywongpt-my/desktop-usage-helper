@@ -798,3 +798,49 @@ All 6 bugs from the v0.2.4 audit are now fixed and pushed.
 - `Desktop.Usage.Helper_0.2.5_x64-setup.exe.sig` (436 bytes)
 - `latest.json` (784 bytes)
 - Release URL: https://github.com/andywongpt-my/desktop-usage-helper/releases/tag/v0.2.5
+
+---
+
+## Session 2026-06-23 #4 — v0.2.6: custom endpoint, HTTP 411, updater key fix
+
+### What changed
+
+Three bug fixes driven by user-reported issues (screenshot showing MiniMax HTTP 411 + custom endpoint not working + auto-updater failing):
+
+1. **Custom API endpoint support** — Users could not set a custom API endpoint URL for any provider. Added `custom_endpoint` field to `ProviderUserConfig`, wired through `ProviderContext` → `registry.rs` → all 5 main providers (ollama, minimax, openai, anthropic, zai). New `set_provider_endpoint` Tauri command + Settings UI endpoint input field.
+
+2. **HTTP 411 Length Required** — MiniMax (and Ollama) POST requests returned 411 because reqwest 0.12 doesn't auto-send `Content-Length: 0` even with `.body("")`. Added explicit `.header("Content-Length", "0")` to both providers. This is the same reqwest 0.12 quirk documented in Hermes Agent memory.
+
+3. **Auto-updater signing key mismatch** — The secret key at `~/.tauri/desktop-usage-helper.key` (key_id `ac0554...`) did NOT match the pubkey in `tauri.conf.json` (key_id `17dcc1...`). Root cause: key was regenerated on 2026-06-23 but the pubkey was never updated to match. Generated a new tauri-native key pair with `npx @tauri-apps/cli signer generate`, updated pubkey in `tauri.conf.json`.
+
+4. **CSP fix** — `connect-src` had path-based entries (`https://github.com/andywongpt-my.github.io`) which CSP doesn't support (matches by origin, not path). Fixed to use `https://github.com` + `https://raw.githubusercontent.com` + `https://objects.githubusercontent.com`.
+
+### Files changed (16)
+- `src-tauri/src/models.rs` — add `custom_endpoint` to `ProviderUserConfig`
+- `src-tauri/src/provider/mod.rs` — add `custom_endpoint` to `ProviderContext`
+- `src-tauri/src/provider/registry.rs` — wire `custom_endpoint` through both refresh paths
+- `src-tauri/src/config.rs` — handle `customEndpoint` in `merge_into` + `set_provider_endpoint`
+- `src-tauri/src/commands.rs` — `set_provider_endpoint` Tauri command
+- `src-tauri/src/lib.rs` — register `set_provider_endpoint`
+- `src-tauri/src/provider/ollama.rs` — Content-Length:0 + custom endpoint
+- `src-tauri/src/provider/minimax.rs` — Content-Length:0 + custom endpoint
+- `src-tauri/src/provider/openai.rs` — custom endpoint
+- `src-tauri/src/provider/anthropic.rs` — custom endpoint
+- `src-tauri/src/provider/zai.rs` — custom endpoint
+- `src-tauri/tauri.conf.json` — new pubkey + CSP fix + version bump
+- `src-tauri/Cargo.toml` — version bump
+- `src/lib/tauri.js` — `setProviderEndpoint` function
+- `src/components/SettingsModal.jsx` — endpoint input UI + import
+
+### Pitfalls encountered
+- **P-25: Signing key mismatch after regeneration** — When regenerating the signing key, you MUST update the pubkey in `tauri.conf.json` to match the new key pair. The old v0.2.5 release was signed with the old key (matching the old pubkey), so it verifies fine. But any new build signed with the new key would fail updater verification against the old pubkey. Always: regenerate key → extract .pub → update tauri.conf.json → rebuild.
+- **P-26: CSP path-based entries don't work** — `connect-src https://github.com/andywongpt-my/desktop-usage-helper` is invalid CSP. CSP matches by origin (scheme://host:port), not by path. Use `https://github.com` to allow all GitHub paths.
+- **P-27: reqwest 0.12 `.body("")` ≠ Content-Length:0** — Even with an empty body string, reqwest 0.12 may not send the `Content-Length: 0` header. Ollama's Google frontend returns HTTP 411. Always add `.header("Content-Length", "0")` explicitly for empty POST bodies.
+
+### Verification
+- `cargo check`: ✅ 0 errors, 14 pre-existing warnings
+- `npm run build`: ✅ 1615 modules in 7.48s
+- Commit `8b7cfcc` pushed to origin/main
+
+### Release assets
+- (pending build completion)

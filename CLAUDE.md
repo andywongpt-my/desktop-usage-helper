@@ -50,11 +50,13 @@ desktop-usage-helper.exe --service
 - Errors bubble up via `AppError` (in `errors.rs`) which serializes to a string for Tauri commands.
 - Config persistence via `ConfigStore` (`config.rs`) backed by `tauri-plugin-store`. Never read/write the JSON directly from provider code.
 - **Config serialization is camelCase** (T-18): `AppConfig`, `ProviderUserConfig`, `AccountConfig` all use `#[serde(rename_all = "camelCase")]`. The `merge_into` function reads camelCase keys. JS frontend sends camelCase directly — no `serializePatch` conversion needed.
+- **Custom endpoint override** (T-20): `ProviderUserConfig.custom_endpoint` lets users override the hardcoded API URL for any provider. Wired through `ProviderContext.custom_endpoint` → provider `fetch()`. Settings UI has an endpoint input per provider.
+- **reqwest 0.12 empty POST quirk** (P-27): `.body("")` alone does NOT send `Content-Length: 0`. Ollama's Google frontend returns HTTP 411. Always add `.header("Content-Length", "0")` explicitly for empty POST bodies.
 - All env-var lookups go through `Provider::env_var()` + the registry's `metas()` helper — no hard-coded env keys elsewhere.
 - Usage history is file-based (`history.rs` → `history.json` in app data dir). For high-volume data, switch to SQLite.
 - DND (Do Not Disturb) window is checked in `notify.rs` before firing toasts — supports overnight ranges.
 - `ProviderStatus` must include all fields: `account_label`, `tags`, `cost_estimate` (use `None`/`vec![]` if not applicable).
-- **Signing key is passwordless** at `~/.tauri/desktop-usage-helper.key`. Regenerated 2026-06-23 (old key was encrypted). To use: `export TAURI_SIGNING_PRIVATE_KEY=$(cat ~/.tauri/desktop-usage-helper.key)`. Do NOT use `TAURI_SIGNING_PRIVATE_KEY_PATH` (not recognized by Tauri v2). If `base64 -d` shows "encrypted secret key", regenerate with `CI=true npx tauri signer generate -w <path> -f` and update pubkey in `tauri.conf.json`.
+- **Signing key is passwordless** at `~/.tauri/desktop-usage-helper.key`. Regenerated 2026-06-23 (v0.2.6, second regeneration — first regen in v0.2.5 didn't update the pubkey in tauri.conf.json, causing updater verification failure). To use: `export TAURI_SIGNING_PRIVATE_KEY=$(cat ~/.tauri/desktop-usage-helper.key)`. Do NOT use `TAURI_SIGNING_PRIVATE_KEY_PATH` (not recognized by Tauri v2). If `base64 -d` shows "encrypted secret key", regenerate with `CI=true npx tauri signer generate -w <path> -f` and **update pubkey in `tauri.conf.json`** from the `.pub` file.
 - **`latest.json` must be manually generated** after build (P-20). Tauri build does not update it automatically.
 
 ### Adding or changing providers
@@ -108,6 +110,7 @@ Vite is configured with `rollupOptions.input` for two entry points: `main` (inde
 - [x] v0.2.2 release — startup crash fix, ConfigStore type mismatch (T-17) ✅
 - [x] v0.2.3 release — automatic update on startup + camelCase config fix + new passwordless signing key (T-18) ✅
 - [x] MiniMax/Ollama HTTP 411 + Enable stale UI fix (T-19) ✅
+- [x] Custom endpoint support + signing key fix + CSP fix (T-20) ✅
 - [ ] Provider custom icon override (T-03)
 - [ ] CSV/JSON usage export (T-04)
 - [ ] OpenCode Zen OAuth (deferred — upstream blocker)
