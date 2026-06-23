@@ -780,17 +780,21 @@ All 6 bugs from the v0.2.4 audit are now fixed and pushed.
 
 ### What changed
 - Bumped version `0.2.4` → `0.2.5` in `package.json`, `tauri.conf.json`, `Cargo.toml`, `scripts/publish.py`
-- **Regenerated signing key** — old key was encrypted (`rsign encrypted secret key`), causing build to hang on password prompt. Regenerated with `CI=true npx tauri signer generate -w ~/.tauri/desktop-usage-helper.key -f`. New pubkey updated in `tauri.conf.json`.
-- **Signing key pitfall**: `TAURI_SIGNING_PRIVATE_KEY` must be passed via `export VAR=$(cat key)` AND `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` must be set (even empty) to skip interactive prompt.
-- Built NSIS installer + `.sig` signature
-- Manually generated `latest.json` (P-20: Tauri build does not auto-generate)
-- Published GitHub Release v0.2.5 with 3 assets:
-  - `Desktop.Usage.Helper_0.2.5_x64-setup.exe` (2.6 MB)
-  - `Desktop.Usage.Helper_0.2.5_x64-setup.exe.sig` (436 bytes)
-  - `latest.json` (784 bytes)
+- Regenerated passwordless signing key (`~/.tauri/desktop-usage-helper.key`) — old key was encrypted, causing Tauri build to hang on password prompt. New pubkey updated in `tauri.conf.json`.
+- Full `tauri build` with `TAURI_SIGNING_PRIVATE_KEY` env var → produced NSIS `.exe` (2.6 MB) + `.sig` + `latest.json`
+- Deleted old v0.2.5 draft release assets, re-uploaded fresh signed assets
+- Set v0.2.5 release as non-draft, non-prerelease, `make_latest=true`
+- v0.2.4 release demoted to `make_latest=false`
+- Tag `v0.2.5` pushed to origin
 
-### Release URL
-https://github.com/andywongpt-my/desktop-usage-helper/releases/tag/v0.2.5
+### Pitfalls encountered
+- **P-21: Signing key was encrypted** — `CI=true npx tauri signer generate -w <path> -f` generates passwordless key, but the old key at `~/.tauri/desktop-usage-helper.key` was encrypted ("rsign encrypted secret key"). Tauri build hangs at "Decrypting updater signing key, expect a prompt for password" if `TAURI_SIGNING_PRIVATE_KEY` is set but key is encrypted. Fix: regenerate key + update pubkey in `tauri.conf.json`.
+- **P-22: `TAURI_SIGNING_PRIVATE_KEY` env var** — must be set to the raw key content (via `export TAURI_SIGNING_PRIVATE_KEY=$(cat ~/.tauri/desktop-usage-helper.key)`), not the path. `TAURI_SIGNING_PRIVATE_KEY_PATH` is not recognized by Tauri v2 build.
+- **P-23: GitHub Release was draft** — `publish.py` creates release via POST which may default to draft. Must PATCH `{draft: false, make_latest: "true"}` after creation. Also need to set previous release `make_latest: "false"`.
+- **P-24: CDN cache on `releases/latest/download/latest.json`** — GitHub CDN caches the redirect. API confirms v0.2.5 is latest, but `curl` may still serve v0.2.4's latest.json for several minutes. Tauri updater follows the redirect correctly once cache expires.
 
-### Updater endpoint
-`https://github.com/andywongpt-my/desktop-usage-helper/releases/latest/download/latest.json` — unchanged, resolves to v0.2.5
+### Release assets
+- `Desktop.Usage.Helper_0.2.5_x64-setup.exe` (2,645,301 bytes)
+- `Desktop.Usage.Helper_0.2.5_x64-setup.exe.sig` (436 bytes)
+- `latest.json` (784 bytes)
+- Release URL: https://github.com/andywongpt-my/desktop-usage-helper/releases/tag/v0.2.5

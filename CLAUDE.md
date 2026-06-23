@@ -54,7 +54,7 @@ desktop-usage-helper.exe --service
 - Usage history is file-based (`history.rs` → `history.json` in app data dir). For high-volume data, switch to SQLite.
 - DND (Do Not Disturb) window is checked in `notify.rs` before firing toasts — supports overnight ranges.
 - `ProviderStatus` must include all fields: `account_label`, `tags`, `cost_estimate` (use `None`/`vec![]` if not applicable).
-- **Signing key is passwordless** at `~/.tauri/desktop-usage-helper.key`. If `base64 -d` shows "encrypted secret key", regenerate with `CI=true npx tauri signer generate -w <path> -f`.
+- **Signing key is passwordless** at `~/.tauri/desktop-usage-helper.key`. Regenerated 2026-06-23 (old key was encrypted). To use: `export TAURI_SIGNING_PRIVATE_KEY=$(cat ~/.tauri/desktop-usage-helper.key)`. Do NOT use `TAURI_SIGNING_PRIVATE_KEY_PATH` (not recognized by Tauri v2). If `base64 -d` shows "encrypted secret key", regenerate with `CI=true npx tauri signer generate -w <path> -f` and update pubkey in `tauri.conf.json`.
 - **`latest.json` must be manually generated** after build (P-20). Tauri build does not update it automatically.
 
 ### Adding or changing providers
