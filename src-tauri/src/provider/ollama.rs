@@ -55,10 +55,9 @@ impl Provider for OllamaProvider {
         let url = ctx.custom_endpoint.unwrap_or(OLLAMA_ME_URL);
 
         // POST /api/me — GET returns 405 on Ollama's router.
-        // Ollama's Google frontend also rejects an empty POST if the request
-        // omits Content-Length (HTTP 411). reqwest does not emit that header
-        // for a body-less POST, so attach an explicit empty body AND the
-        // Content-Length: 0 header to be safe.
+        // Ollama's Google frontend returns HTTP 411 if the POST lacks
+        // Content-Length. reqwest does NOT emit Content-Length: 0 for an
+        // empty .body("") — must set the header explicitly.
         let resp = ctx
             .http
             .post(url)
