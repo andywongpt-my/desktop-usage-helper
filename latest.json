@@ -1,0 +1,11 @@
+{
+  "version": "0.2.6",
+  "notes": "Desktop Usage Helper v0.2.6 - Custom endpoint support, HTTP 411 fix, auto-updater signing key fix",
+  "pub_date": "2026-06-23T11:35:49Z",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUcld0cnlQbUxoT0ZUc2twWFFNRlRDbWlQWlBwTDZzVmxHdUw5RGoyYXFkYTJVVjVCeVo4TmUxakFaakJYQW1GM2xWeGFaTUhBQTdOZ1RHMUJGbnhHemlmb2ZzcVNVSlFZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgyMjE0NTM4CWZpbGU6RGVza3RvcCBVc2FnZSBIZWxwZXJfMC4yLjZfeDY0LXNldHVwLmV4ZQpTQnNzaUJVNEZzZWJnRXR6MmFudzViblNjWjBsZi9ZeTNrWWdFK3Z1WnFwa3FROWJqai8xTEw5UzlOdm5VT1ZtMTdhQW5ublNQM3hVWXRHODJ3cGVDUT09Cg==",
+      "url": "https://github.com/andywongpt-my/desktop-usage-helper/releases/download/v0.2.6/Desktop.Usage.Helper_0.2.6_x64-setup.exe"
+    }
+  }
+}
