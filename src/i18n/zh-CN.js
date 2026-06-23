@@ -23,6 +23,7 @@ export const zhCN = {
   "dashboard.low": "偏低",
   "dashboard.healthy": "正常",
   "dashboard.unknown": "未知",
+  "dashboard.next_reset": "下次重置",
 
   // EmptyState
   "empty.title": "未启用任何供应商",
@@ -39,6 +40,10 @@ export const zhCN = {
   "card.dashboard": "控制台",
   "card.estimate": "≈ ¥%s / 月",
   "card.resets_in": "%s 后重置",
+  "card.reset_today": "今天",
+  "card.reset_tomorrow": "明天",
+  "card.next_reset": "下次重置",
+  "card.no_reset": "—",
 
   // StatusBar
   "status.refreshing": "刷新中",

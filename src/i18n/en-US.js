@@ -23,6 +23,7 @@ export const enUS = {
   "dashboard.low": "low",
   "dashboard.healthy": "healthy",
   "dashboard.unknown": "unknown",
+  "dashboard.next_reset": "Next reset",
 
   // EmptyState
   "empty.title": "No providers enabled",
@@ -39,6 +40,10 @@ export const enUS = {
   "card.dashboard": "dashboard",
   "card.estimate": "≈ $%s / month",
   "card.resets_in": "resets in %s",
+  "card.reset_today": "Today",
+  "card.reset_tomorrow": "Tomorrow",
+  "card.next_reset": "Next reset",
+  "card.no_reset": "—",
 
   // StatusBar
   "status.refreshing": "refreshing",

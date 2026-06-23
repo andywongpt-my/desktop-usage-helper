@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { CheckCircle2, AlertTriangle, XCircle, HelpCircle, Clock, Activity, ChevronDown, TrendingUp, DollarSign, ExternalLink } from "lucide-react";
+import { CheckCircle2, AlertTriangle, XCircle, HelpCircle, Clock, Activity, ChevronDown, TrendingUp, DollarSign, TimerReset, ExternalLink } from "lucide-react";
 import TrendChart from "./TrendChart.jsx";
 import { useUsageStore } from "../stores/useUsageStore.js";
 import { useI18nStore } from "../stores/useI18nStore.js";
@@ -64,22 +64,66 @@ function timeUntilReset(resetAt) {
   return `${d}d ${h % 24}h`;
 }
 
-function MetricBar({ metric }) {
+/// Format the absolute clock time for a reset timestamp.
+/// Returns strings like "Today 3:30 PM", "Tomorrow 9:00 AM", "Jun 25 12:00 AM".
+function formatResetClock(resetAt, t) {
+  if (!resetAt) return null;
+  const date = new Date(resetAt);
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const isTomorrow = date.toDateString() === tomorrow.toDateString();
+
+  const timeStr = date.toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+  if (isToday) return `${t("card.reset_today")} ${timeStr}`;
+  if (isTomorrow) return `${t("card.reset_tomorrow")} ${timeStr}`;
+  const monthDay = date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+  return `${monthDay} ${timeStr}`;
+}
+
+/// Get the soonest reset timestamp from primary + secondary metrics.
+function getSoonestReset(status) {
+  const candidates = [];
+  if (status?.primary?.resetAt) candidates.push(status.primary.resetAt);
+  if (status?.secondary?.resetAt) candidates.push(status.secondary.resetAt);
+  if (candidates.length === 0) return null;
+  return Math.min(...candidates);
+}
+
+function MetricBar({ metric, t }) {
   if (!metric) return null;
   const p = pct(metric.used, metric.limit);
+  // p = used% (0-100). High used% = danger (red), low used% = ok (green).
   const fillClass = p == null ? "progress-fill-info" :
-    p < 30 ? "progress-fill-danger" :
-    p < 60 ? "progress-fill-warn" : "progress-fill-ok";
+    p >= 90 ? "progress-fill-danger" :
+    p >= 60 ? "progress-fill-warn" : "progress-fill-ok";
+  const resetClock = formatResetClock(metric.resetAt, t);
   return (
     <div className="metric-block">
       <div className="flex items-start justify-between gap-3 text-xs">
         <div>
           <p className="text-slate-300">{metric.label}</p>
           {metric.resetAt && (
-            <p className="mt-1 flex items-center gap-1 text-[10px] text-slate-500">
-              <Clock size={10} />
-              <span>resets in {timeUntilReset(metric.resetAt)}</span>
-            </p>
+            <div className="mt-1 flex flex-col gap-0.5 text-[10px] text-slate-500">
+              <span className="flex items-center gap-1">
+                <Clock size={10} />
+                <span>{t("card.resets_in", timeUntilReset(metric.resetAt))}</span>
+              </span>
+              {resetClock && (
+                <span className="flex items-center gap-1 pl-[14px] text-slate-600">
+                  <TimerReset size={10} />
+                  <span>{resetClock}</span>
+                </span>
+              )}
+            </div>
           )}
         </div>
         <span className="shrink-0 font-mono text-slate-100">
@@ -114,6 +158,12 @@ export default function ProviderCard({ provider }) {
   const primaryMetric = status?.primary;
   const secondaryMetric = status?.secondary;
   const costEstimate = status?.costEstimate;
+
+  // Soonest reset across all metrics
+  const soonestReset = getSoonestReset(status);
+  const resetMs = soonestReset ? soonestReset - Date.now() : null;
+  const isResetNear = resetMs != null && resetMs > 0 && resetMs < 2 * 60 * 60 * 1000; // < 2h
+  const isResetToday = soonestReset && new Date(soonestReset).toDateString() === new Date().toDateString();
 
   const loadTrend = useCallback(async (hours) => {
     const range = hours ?? trendRange;
@@ -181,8 +231,8 @@ export default function ProviderCard({ provider }) {
         </div>
       ) : (
         <div className="mt-4 space-y-3">
-          <MetricBar metric={primaryMetric} />
-          {secondaryMetric && <MetricBar metric={secondaryMetric} />}
+          <MetricBar metric={primaryMetric} t={t} />
+          {secondaryMetric && <MetricBar metric={secondaryMetric} t={t} />}
           {costEstimate != null && (
             <div className="flex items-center gap-2 text-[11px] text-slate-400">
               <DollarSign size={12} className="text-emerald-400" />
@@ -196,6 +246,18 @@ export default function ProviderCard({ provider }) {
         <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
           <Activity size={11} />
           <span className="font-mono">{status?.latencyMs != null ? `${status.latencyMs}ms` : "-"}</span>
+          {soonestReset && (
+            <span className={`ml-2 inline-flex items-center gap-1 rounded px-1.5 py-0.5 ${
+              isResetNear
+                ? "bg-amber-300/15 text-amber-200"
+                : isResetToday
+                  ? "bg-sky-300/10 text-sky-200"
+                  : "text-slate-600"
+            }`}>
+              <TimerReset size={10} />
+              <span>{t("card.resets_in", timeUntilReset(soonestReset))}</span>
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {provider.docs_url && (

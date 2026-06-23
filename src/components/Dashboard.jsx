@@ -1,10 +1,30 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Activity, AlertTriangle, CheckCircle2, HelpCircle, ChevronDown } from "lucide-react";
+import { Activity, AlertTriangle, CheckCircle2, HelpCircle, ChevronDown, TimerReset } from "lucide-react";
 import { useUsageStore } from "../stores/useUsageStore.js";
 import { useI18nStore } from "../stores/useI18nStore.js";
 import { useConfigStore } from "../stores/useConfigStore.js";
 import ProviderCard from "./ProviderCard.jsx";
 import EmptyState from "./EmptyState.jsx";
+
+function formatResetShort(resetAt) {
+  if (!resetAt) return null;
+  const ms = resetAt - Date.now();
+  if (ms <= 0) return "now";
+  const min = Math.floor(ms / 60_000);
+  if (min < 60) return `${min}m`;
+  const h = Math.floor(min / 60);
+  if (h < 48) return `${h}h ${min % 60}m`;
+  const d = Math.floor(h / 24);
+  return `${d}d ${h % 24}h`;
+}
+
+function getSoonestResetFromStatus(status) {
+  const candidates = [];
+  if (status?.primary?.resetAt) candidates.push(status.primary.resetAt);
+  if (status?.secondary?.resetAt) candidates.push(status.secondary.resetAt);
+  if (candidates.length === 0) return null;
+  return Math.min(...candidates);
+}
 
 function SummaryTile({ icon: Icon, label, value, tone }) {
   const toneClass = {
@@ -12,6 +32,7 @@ function SummaryTile({ icon: Icon, label, value, tone }) {
     warn: "text-amber-200 bg-amber-300/10 border-amber-300/15",
     danger: "text-rose-200 bg-rose-300/10 border-rose-300/15",
     neutral: "text-slate-300 bg-white/[0.04] border-white/10",
+    reset: "text-sky-200 bg-sky-300/10 border-sky-300/15",
   }[tone];
 
   return (
@@ -80,7 +101,6 @@ export default function Dashboard({ onRefresh }) {
 
   useEffect(() => {
     const onFocus = async () => {
-      // Debounce: skip if refreshed within last 30s (Rust poll loop already covers periodic refresh)
       const now = Date.now();
       if (now - lastRefreshRef.current < 30_000) return;
       lastRefreshRef.current = now;
@@ -106,6 +126,20 @@ export default function Dashboard({ onRefresh }) {
       },
       { ok: 0, warn: 0, danger: 0, unknown: 0 }
     );
+  }, [providers]);
+
+  // Find the next reset across all providers
+  const nextReset = useMemo(() => {
+    let earliest = null;
+    let earliestProvider = null;
+    for (const p of providers) {
+      const reset = getSoonestResetFromStatus(p.status);
+      if (reset && (earliest === null || reset < earliest)) {
+        earliest = reset;
+        earliestProvider = p;
+      }
+    }
+    return { time: earliest, provider: earliestProvider };
   }, [providers]);
 
   // Group providers by first tag (ungrouped → "__ungrouped")
@@ -153,11 +187,17 @@ export default function Dashboard({ onRefresh }) {
             )}
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
           <SummaryTile icon={AlertTriangle} label={t("dashboard.critical")} value={counts.danger} tone="danger" />
           <SummaryTile icon={AlertTriangle} label={t("dashboard.low")} value={counts.warn} tone="warn" />
           <SummaryTile icon={CheckCircle2} label={t("dashboard.healthy")} value={counts.ok} tone="ok" />
           <SummaryTile icon={HelpCircle} label={t("dashboard.unknown")} value={counts.unknown} tone="neutral" />
+          <SummaryTile
+            icon={TimerReset}
+            label={t("card.next_reset")}
+            value={nextReset.time ? formatResetShort(nextReset.time) : t("card.no_reset")}
+            tone="reset"
+          />
         </div>
       </section>
 
