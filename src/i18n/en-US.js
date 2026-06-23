@@ -36,6 +36,7 @@ export const enUS = {
   "card.unknown": "Unknown",
   "card.details": "details",
   "card.trend": "trend",
+  "card.dashboard": "dashboard",
   "card.estimate": "≈ $%s / month",
   "card.resets_in": "resets in %s",
 

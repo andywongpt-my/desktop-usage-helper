@@ -36,6 +36,7 @@ export const zhCN = {
   "card.unknown": "未知",
   "card.details": "详情",
   "card.trend": "趋势",
+  "card.dashboard": "控制台",
   "card.estimate": "≈ ¥%s / 月",
   "card.resets_in": "%s 后重置",
 

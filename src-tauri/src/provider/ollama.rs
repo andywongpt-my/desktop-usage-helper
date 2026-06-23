@@ -42,7 +42,7 @@ impl Provider for OllamaProvider {
     fn env_var(&self) -> Option<&'static str> { Some("OLLAMA_API_KEY") }
     fn docs_url(&self) -> Option<&'static str> { Some("https://ollama.com/settings/billing") }
     fn description(&self) -> &'static str {
-        "Ollama Cloud Pro subscription + extra-usage auto-reload."
+        "Ollama Cloud Pro subscription. Session/weekly usage only visible on the web dashboard — click the dashboard button to check."
     }
 
     async fn fetch(&self, ctx: &ProviderContext<'_>) -> AppResult<ProviderStatus> {

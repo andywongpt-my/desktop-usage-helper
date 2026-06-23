@@ -129,6 +129,7 @@ pub fn run_with_options(opts: RunOptions) {
             commands::toggle_widget,
             commands::sync_export,
             commands::sync_import,
+            commands::open_url,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

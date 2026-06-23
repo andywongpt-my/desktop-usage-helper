@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
-import { CheckCircle2, AlertTriangle, XCircle, HelpCircle, Clock, Activity, ChevronDown, TrendingUp, DollarSign } from "lucide-react";
+import { CheckCircle2, AlertTriangle, XCircle, HelpCircle, Clock, Activity, ChevronDown, TrendingUp, DollarSign, ExternalLink } from "lucide-react";
 import TrendChart from "./TrendChart.jsx";
 import { useUsageStore } from "../stores/useUsageStore.js";
 import { useI18nStore } from "../stores/useI18nStore.js";
-import { getHistory } from "../lib/tauri.js";
+import { getHistory, openUrl } from "../lib/tauri.js";
 
 const STATE_STYLES = {
   ok: {
@@ -198,6 +198,16 @@ export default function ProviderCard({ provider }) {
           <span className="font-mono">{status?.latencyMs != null ? `${status.latencyMs}ms` : "-"}</span>
         </div>
         <div className="flex items-center gap-2">
+          {provider.docs_url && (
+            <button
+              onClick={() => openUrl(provider.docs_url)}
+              className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] text-slate-500 transition-colors hover:bg-white/[0.04] hover:text-slate-200 active:scale-[0.98]"
+              title={provider.docs_url}
+            >
+              <ExternalLink size={12} />
+              {t("card.dashboard")}
+            </button>
+          )}
           <button
             onClick={handleTrendToggle}
             className={`inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] transition-colors hover:bg-white/[0.04] hover:text-slate-200 active:scale-[0.98] ${showTrend ? "text-accent" : "text-slate-500"}`}

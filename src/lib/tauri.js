@@ -31,15 +31,15 @@ const mockConfig = {
 };
 
 const mockProviders = [
-  { id: "ollama", label: "Ollama Cloud", kind: "usage", enabled: true, envVar: "OLLAMA_API_KEY", envPresent: true },
-  { id: "minimax", label: "MiniMax", kind: "credits", enabled: true, envVar: "MINIMAX_API_KEY", envPresent: false },
-  { id: "codex", label: "Codex", kind: "local auth", enabled: true, envVar: "~/.codex/auth.json", envPresent: true },
-  { id: "opencode", label: "OpenCode Zen", kind: "balance", enabled: true, envVar: "OPENCODE_ZEN_API_KEY", envPresent: false },
-  { id: "anthropic", label: "Claude / Anthropic", kind: "llm_api", enabled: false, envVar: "ANTHROPIC_API_KEY", envPresent: false },
-  { id: "openai", label: "OpenAI Platform", kind: "llm_api", enabled: false, envVar: "OPENAI_API_KEY", envPresent: false },
-  { id: "zai", label: "Z.ai / GLM", kind: "llm_api", enabled: false, envVar: "ZAI_API_KEY", envPresent: false },
-  { id: "cursor", label: "Cursor", kind: "subscription", enabled: false, envVar: null, envPresent: false },
-  { id: "github_copilot", label: "GitHub Copilot", kind: "subscription", enabled: false, envVar: "GITHUB_TOKEN", envPresent: false },
+  { id: "ollama", label: "Ollama Cloud", kind: "usage", enabled: true, envVar: "OLLAMA_API_KEY", envPresent: true, docs_url: "https://ollama.com/settings/billing", description: "Ollama Cloud Pro subscription." },
+  { id: "minimax", label: "MiniMax", kind: "credits", enabled: true, envVar: "MINIMAX_API_KEY", envPresent: false, docs_url: "https://platform.minimaxi.com", description: "MiniMax Token Plan subscription." },
+  { id: "codex", label: "Codex", kind: "local auth", enabled: true, envVar: "~/.codex/auth.json", envPresent: true, docs_url: "https://chatgpt.com", description: "ChatGPT Codex CLI." },
+  { id: "opencode", label: "OpenCode Zen", kind: "balance", enabled: true, envVar: "OPENCODE_ZEN_API_KEY", envPresent: false, docs_url: "https://opencode.ai/docs", description: "OpenCode Zen API." },
+  { id: "anthropic", label: "Claude / Anthropic", kind: "llm_api", enabled: false, envVar: "ANTHROPIC_API_KEY", envPresent: false, docs_url: "https://console.anthropic.com/settings/usage", description: "Anthropic Claude API." },
+  { id: "openai", label: "OpenAI Platform", kind: "llm_api", enabled: false, envVar: "OPENAI_API_KEY", envPresent: false, docs_url: "https://platform.openai.com/usage", description: "OpenAI Platform API." },
+  { id: "zai", label: "Z.ai / GLM", kind: "llm_api", enabled: false, envVar: "ZAI_API_KEY", envPresent: false, docs_url: "https://z.ai/billing", description: "Z.ai / GLM API." },
+  { id: "cursor", label: "Cursor", kind: "subscription", enabled: false, envVar: null, envPresent: false, docs_url: "https://cursor.com/settings", description: "Cursor IDE subscription." },
+  { id: "github_copilot", label: "GitHub Copilot", kind: "subscription", enabled: false, envVar: "GITHUB_TOKEN", envPresent: false, docs_url: "https://github.com/settings/billing", description: "GitHub Copilot subscription." },
 ];
 
 const now = Date.now();
@@ -170,6 +170,10 @@ export async function syncImport() {
 
 export async function ping() {
   return await call("ping", undefined, "pong");
+}
+
+export async function openUrl(url) {
+  return await call("open_url", { url }, null);
 }
 
 // ── Auto-updater ──────────────────────────────────────────────
