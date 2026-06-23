@@ -1,6 +1,6 @@
 [package]
 name = "desktop-usage-helper"
-version = "0.2.6"
+version = "0.2.7"
 description = "Aggregates LLM vendor usage/balance in one Windows tray app"
 authors = ["andywongpt"]
 edition = "2021"
